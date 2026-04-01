@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  OFFICER
+}
+
+enum WasteType {
+  ORGANIC
+  INORGANIC
+}
+
+enum NotificationType {
+  CAPACITY_FULL
+}
+
+enum WadahType {
+  ORGANIC
+  INORGANIC
+}
+
+// ─── Models ────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(OFFICER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Device {
+  id         String    @id @default(cuid())
+  deviceCode String   @unique @map("device_code")
+  name       String
+  location   String
+  isActive   Boolean  @default(true) @map("is_active")
+  lastPingAt DateTime? @map("last_ping_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  wasteEvents   WasteEvent[]
+  capacityLogs  CapacityLog[]
+  notifications Notification[]
+
+  @@map("devices")
+}
+
+model WasteEvent {
+  id            String    @id @default(cuid())
+  deviceId      String    @map("device_id")
+  wasteType     WasteType @map("waste_type")
+  moistureValue Float     @map("moisture_value")
+  detectedAt    DateTime  @default(now()) @map("detected_at")
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([detectedAt])
+  @@map("waste_events")
+}
+
+model CapacityLog {
+  id             String   @id @default(cuid())
+  deviceId       String   @map("device_id")
+  organicLevel   Int      @map("organic_level")
+  inorganicLevel Int      @map("inorganic_level")
+  recordedAt     DateTime @default(now()) @map("recorded_at")
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([recordedAt])
+  @@map("capacity_logs")
+}
+
+model Notification {
+  id            String           @id @default(cuid())
+  deviceId      String           @map("device_id")
+  type          NotificationType @default(CAPACITY_FULL)
+  wadahType     WadahType        @map("wadah_type")
+  capacityValue Int              @map("capacity_value")
+  isRead        Boolean          @default(false) @map("is_read")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([isRead])
+  @@map("notifications")
+}
