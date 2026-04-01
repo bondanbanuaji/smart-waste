@@ -87,7 +87,7 @@ export default function DevicesPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Manajemen Device</h1>
-                    <p className="text-slate-500 dark:text-slate-400">Kelola dan pantau seluruh unit smart trash bin (ESP32).</p>
+                    <p className="text-slate-500 dark:text-slate-400">Kelola dan pantau seluruh unit smart waste bin (ESP32).</p>
                 </div>
 
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

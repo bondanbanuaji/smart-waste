@@ -54,7 +54,7 @@ export function Sidebar() {
                     </button>
                     {!isCollapsed && (
                         <h1 className="text-xl font-bold bg-gradient-to-br from-green-700 to-green-500 bg-clip-text text-transparent">
-                            Smart-Trash
+                            Smart Waste
                         </h1>
                     )}
                 </div>

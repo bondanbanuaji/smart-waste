@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+
+export const metadata: Metadata = {
+    title: {
+        default: "Dashboard",
+        template: "%s | Smart Waste",
+    },
+};
 
 export default function DashboardLayout({
     children,

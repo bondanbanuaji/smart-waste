@@ -4,8 +4,11 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "Smart-Trash Dashboard",
-  description: "IoT Dashboard for Smart Trash Bin System",
+  title: {
+    default: "Smart Waste",
+    template: "%s | Smart Waste",
+  },
+  description: "IoT Dashboard for Smart Waste Bin System",
 };
 
 export default function RootLayout({
