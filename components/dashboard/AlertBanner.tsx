@@ -28,7 +28,7 @@ export function AlertBanner({ alerts, onDismiss }: AlertBannerProps) {
                         <div>
                             <p className="font-bold text-red-800 dark:text-red-200 text-lg tracking-tight">Segera Angkut!</p>
                             <p className="text-red-700 dark:text-red-300 font-medium">
-                                {alert.deviceName} — Wadah <span className="font-bold">{alert.wadahType === "ORGANIC" ? "Organik" : "Anorganik"}</span> telah penuh ({alert.capacityValue}%).
+                                {alert.deviceName} — Wadah <span className="font-bold">{alert.wadahType === "ORGANIC" ? "Organik (Wet)" : "Anorganik (Dry)"}</span> telah penuh ({alert.capacityValue}%).
                             </p>
                         </div>
                     </div>

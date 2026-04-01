@@ -140,8 +140,8 @@ export default function DashboardPage() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard title="Total Event Hari Ini" value={data?.stats.totalEventToday || 0} icon={<RefreshCw className="h-5 w-5 text-blue-500" />} />
-                <StatCard title="Sampah Organik" value={data?.stats.totalOrganicToday || 0} icon={<Scale className="h-5 w-5 text-green-500" />} />
-                <StatCard title="Sampah Anorganik" value={data?.stats.totalInorganicToday || 0} icon={<BarChart4 className="h-5 w-5 text-slate-500 dark:text-slate-400" />} />
+                <StatCard title="Sampah Organik (Wet)" value={data?.stats.totalOrganicToday || 0} icon={<Scale className="h-5 w-5 text-green-500" />} />
+                <StatCard title="Sampah Anorganik (Dry)" value={data?.stats.totalInorganicToday || 0} icon={<BarChart4 className="h-5 w-5 text-slate-500 dark:text-slate-400" />} />
                 <StatCard title="Minggu Ini" value={data?.stats.totalEventThisWeek || 0} icon={<TrendingUp className="h-5 w-5 text-indigo-500" />} />
             </div>
 

@@ -57,13 +57,13 @@ export default function HistoryPage() {
                             onClick={() => { setFilterType("ORGANIC"); setPage(1); }}
                             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${filterType === "ORGANIC" ? "bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-500" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}
                         >
-                            Organik
+                            Organik (Wet)
                         </button>
                         <button
                             onClick={() => { setFilterType("INORGANIC"); setPage(1); }}
                             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${filterType === "INORGANIC" ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}
                         >
-                            Anorganik
+                            Anorganik (Dry)
                         </button>
                     </div>
                 </div>

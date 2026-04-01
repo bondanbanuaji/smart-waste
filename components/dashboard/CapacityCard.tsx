@@ -71,7 +71,7 @@ export function CapacityCard({
                             <div className="p-1 rounded bg-green-50 dark:bg-green-950/50">
                                 <LeafIcon className="w-4 h-4 text-green-600 dark:text-green-500" />
                             </div>
-                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Organik</span>
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Organik (Wet)</span>
                         </div>
                         <span className={`text-base font-bold ${getCapacityColor(organicLevel)}`}>
                             {organicLevel}%
@@ -91,7 +91,7 @@ export function CapacityCard({
                             <div className="p-1 rounded bg-slate-100 dark:bg-slate-800">
                                 <Trash2 className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                             </div>
-                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Anorganik</span>
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Anorganik (Dry)</span>
                         </div>
                         <span className={`text-base font-bold ${getCapacityColor(inorganicLevel)}`}>
                             {inorganicLevel}%

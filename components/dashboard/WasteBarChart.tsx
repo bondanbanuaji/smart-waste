@@ -62,8 +62,8 @@ export function WasteBarChart({ data }: WasteBarChartProps) {
                                     content={<CustomTooltip />}
                                 />
                                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }} />
-                                <Bar name="Organik" dataKey="organic" fill="#22c55e" radius={[4, 4, 0, 0]} barSize={32} />
-                                <Bar name="Anorganik" dataKey="inorganic" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={32} />
+                                <Bar name="Organik (Wet)" dataKey="organic" fill="#22c55e" radius={[4, 4, 0, 0]} barSize={32} />
+                                <Bar name="Anorganik (Dry)" dataKey="inorganic" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={32} />
                             </BarChart>
                         </ResponsiveContainer>
                     )}

@@ -21,7 +21,7 @@ export function StatusBadge({ type, className }: StatusBadgeProps) {
                 className
             )}
         >
-            {isOrganic ? "Organik" : "Anorganik"}
+            {isOrganic ? "Organik (Wet)" : "Anorganik (Dry)"}
         </Badge>
     );
 }

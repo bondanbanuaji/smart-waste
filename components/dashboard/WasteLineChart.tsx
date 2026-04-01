@@ -58,8 +58,8 @@ export function WasteLineChart({ data, deviceName }: WasteLineChartProps) {
                                     domain={[0, 100]}
                                 />
                                 <Tooltip content={<CustomTooltip />} />
-                                <Line name="Organik" type="monotone" dataKey="organicLevel" stroke="#22c55e" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
-                                <Line name="Anorganik" type="monotone" dataKey="inorganicLevel" stroke="#94a3b8" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
+                                <Line name="Organik (Wet)" type="monotone" dataKey="organicLevel" stroke="#22c55e" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
+                                <Line name="Anorganik (Dry)" type="monotone" dataKey="inorganicLevel" stroke="#94a3b8" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     )}
