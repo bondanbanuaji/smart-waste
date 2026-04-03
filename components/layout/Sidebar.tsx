@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, History, Smartphone, LogOut, Menu, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutDashboard, History, Smartphone, LogOut, Menu, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -35,6 +35,12 @@ export function Sidebar() {
             icon: Smartphone,
             href: "/dashboard/devices",
             active: pathname === "/dashboard/devices",
+        });
+        routes.push({
+            label: "Kelola Akun",
+            icon: Users,
+            href: "/dashboard/accounts",
+            active: pathname === "/dashboard/accounts",
         });
     }
 
