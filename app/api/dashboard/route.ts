@@ -51,6 +51,37 @@ export async function GET() {
             where: { detectedAt: { gte: startOfWeek } },
         });
 
+        // 7-Days Chart Data Aggregation
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
+        const recentEvents = await prisma.wasteEvent.findMany({
+            where: { detectedAt: { gte: sevenDaysAgo } },
+            select: { detectedAt: true, wasteType: true }
+        });
+
+        // Initialize array with last 7 days (formatted in id-ID locale)
+        const weeklyDataMap = new Map();
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const label = d.toLocaleDateString('id-ID', { weekday: 'short' });
+            weeklyDataMap.set(label, { label, organic: 0, inorganic: 0 });
+        }
+
+        // Populate counts
+        recentEvents.forEach(event => {
+            const label = event.detectedAt.toLocaleDateString('id-ID', { weekday: 'short' });
+            if (weeklyDataMap.has(label)) {
+                const dayData = weeklyDataMap.get(label);
+                if (event.wasteType === 'ORGANIC') dayData.organic += 1;
+                else dayData.inorganic += 1;
+            }
+        });
+
+        const weeklyChartData = Array.from(weeklyDataMap.values());
+
         const unreadNotificationCount = await prisma.notification.count({
             where: { isRead: false },
         });
@@ -62,6 +93,7 @@ export async function GET() {
                 totalOrganicToday,
                 totalInorganicToday,
                 totalEventThisWeek,
+                weeklyChartData,
             },
             unreadNotificationCount,
         });

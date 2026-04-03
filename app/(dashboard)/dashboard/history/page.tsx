@@ -6,7 +6,9 @@ import { WasteEventItem } from "@/types";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, AlertCircle } from "lucide-react";
+import { useSSE } from "@/hooks/useSSE";
+import { SSEDataUpdate } from "@/types";
 
 export default function HistoryPage() {
     const [events, setEvents] = useState<WasteEventItem[]>([]);
@@ -14,6 +16,7 @@ export default function HistoryPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [filterType, setFilterType] = useState<string>("");
+    const [newEventsCount, setNewEventsCount] = useState(0);
 
     const fetchHistory = async (p: number, type: string) => {
         setLoading(true);
@@ -36,7 +39,14 @@ export default function HistoryPage() {
 
     useEffect(() => {
         fetchHistory(page, filterType);
+        setNewEventsCount(0); // Reset new events count when changing page/filter
     }, [page, filterType]);
+
+    useSSE((update: SSEDataUpdate) => {
+        if (!filterType || update.wasteType === filterType) {
+            setNewEventsCount(prev => prev + 1);
+        }
+    });
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto pb-10">
@@ -45,23 +55,23 @@ export default function HistoryPage() {
                     <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Riwayat Pembuangan</h1>
                     <p className="text-slate-500 dark:text-slate-400">Mencatat setiap event sampah yang dibuang ke wadah.</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="flex bg-white dark:bg-slate-900/50 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-1">
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar w-full sm:w-auto">
+                    <div className="flex snap-x bg-white dark:bg-slate-900/50 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 p-1 min-w-max">
                         <button
                             onClick={() => { setFilterType(""); setPage(1); }}
-                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${filterType === "" ? "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}
+                            className={`snap-center px-4 py-2 sm:py-1.5 text-sm font-medium rounded-md transition-colors ${filterType === "" ? "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}
                         >
                             Semua
                         </button>
                         <button
                             onClick={() => { setFilterType("ORGANIC"); setPage(1); }}
-                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${filterType === "ORGANIC" ? "bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-500" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}
+                            className={`snap-center px-4 py-2 sm:py-1.5 text-sm font-medium rounded-md transition-colors ${filterType === "ORGANIC" ? "bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-500" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}
                         >
                             Organik (Wet)
                         </button>
                         <button
                             onClick={() => { setFilterType("INORGANIC"); setPage(1); }}
-                            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${filterType === "INORGANIC" ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}
+                            className={`snap-center px-4 py-2 sm:py-1.5 text-sm font-medium rounded-md transition-colors ${filterType === "INORGANIC" ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"}`}
                         >
                             Anorganik (Dry)
                         </button>
@@ -69,8 +79,22 @@ export default function HistoryPage() {
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
-                <div className="overflow-x-auto">
+            {newEventsCount > 0 && (
+                <div className="flex justify-center animate-in fade-in slide-in-from-top-2">
+                    <Button
+                        onClick={() => { setPage(1); fetchHistory(1, filterType); setNewEventsCount(0); }}
+                        className="bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg gap-2"
+                        size="sm"
+                    >
+                        <AlertCircle className="w-4 h-4 animate-pulse" />
+                        {newEventsCount} event baru tersedia. Muat Ulang.
+                    </Button>
+                </div>
+            )}
+
+            <div className="bg-transparent sm:bg-white sm:dark:bg-slate-900 rounded-none sm:rounded-xl shadow-none sm:shadow-sm border-none sm:border sm:border-slate-100 sm:dark:border-slate-800 overflow-hidden">
+                {/* Desktop Table View */}
+                <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
                             <tr>
@@ -124,6 +148,46 @@ export default function HistoryPage() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Cards View */}
+                <div className="block sm:hidden space-y-3">
+                    {loading ? (
+                        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">
+                            <LoadingSkeleton />
+                        </div>
+                    ) : events.length === 0 ? (
+                        <div className="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-sm text-center text-slate-500 flex flex-col items-center gap-3">
+                            <Filter className="w-8 h-8 text-slate-200" />
+                            <p className="text-sm">Tidak ada data ditemukan.</p>
+                        </div>
+                    ) : (
+                        events.map((event, index) => (
+                            <div key={event.id} className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-3">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-medium text-slate-400 dark:text-slate-500 w-5">
+                                            #{((page - 1) * 20 + index + 1)}
+                                        </span>
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-sm text-slate-800 dark:text-slate-200 leading-none">{event.deviceName}</span>
+                                            <span className="text-xs text-slate-500 dark:text-slate-400">{event.deviceCode}</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right flex flex-col items-end">
+                                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{formatRelativeTime(event.detectedAt)}</span>
+                                        <span className="text-[10px] text-slate-400 dark:text-slate-500">{new Date(event.detectedAt).toLocaleDateString('id-ID')}</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between pt-3 border-t border-slate-50 dark:border-slate-800/50">
+                                    <StatusBadge type={event.wasteType} />
+                                    <span className="text-xs font-mono bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-700">
+                                        💧 {event.moistureValue.toFixed(1)} mb
+                                    </span>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
 
                 {/* Pagination Footer */}

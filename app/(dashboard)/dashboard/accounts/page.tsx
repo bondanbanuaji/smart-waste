@@ -266,8 +266,9 @@ export default function AccountsPage() {
                 </Dialog>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
+            <div className="bg-transparent sm:bg-white sm:dark:bg-slate-900 rounded-none sm:rounded-xl border-none sm:border sm:border-slate-100 sm:dark:border-slate-800 shadow-none sm:shadow-sm overflow-hidden">
+                {/* Desktop Table View */}
+                <div className="hidden sm:block overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow className="hover:bg-transparent bg-slate-50/50 dark:bg-slate-800/50">
@@ -295,7 +296,7 @@ export default function AccountsPage() {
                                 </TableRow>
                             ) : (
                                 users.map((user) => (
-                                    <TableRow key={user.id} className="group transition-colors">
+                                    <TableRow key={user.id} className="group transition-colors border-slate-100 dark:border-slate-800/50">
                                         <TableCell className="font-medium text-slate-900 dark:text-slate-100">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
@@ -351,6 +352,76 @@ export default function AccountsPage() {
                             )}
                         </TableBody>
                     </Table>
+                </div>
+
+                {/* Mobile Cards View */}
+                <div className="block sm:hidden space-y-3">
+                    {loading ? (
+                        Array(3).fill(0).map((_, i) => (
+                            <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">
+                                <LoadingSkeleton />
+                            </div>
+                        ))
+                    ) : users.length === 0 ? (
+                        <div className="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-sm text-center text-slate-500">
+                            Belum ada akun terdaftar.
+                        </div>
+                    ) : (
+                        users.map((user) => (
+                            <div key={user.id} className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-3">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                                            <UserIcon className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{user.name}</span>
+                                                {user.id === currentUserId && (
+                                                    <Badge variant="outline" className="text-[9px] py-0 h-4 border-green-200 text-green-600 bg-green-50 dark:bg-green-950/30">Anda</Badge>
+                                                )}
+                                            </div>
+                                            <span className="text-xs text-slate-500 dark:text-slate-400">{user.email}</span>
+                                        </div>
+                                    </div>
+                                    {user.role === "ADMIN" ? (
+                                        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-500 border-none font-medium flex gap-1 h-6 shrink-0">
+                                            <Shield className="w-3 h-3 hidden xs:block" />
+                                            Admin
+                                        </Badge>
+                                    ) : (
+                                        <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-none font-medium text-xs h-6 shrink-0">
+                                            Petugas
+                                        </Badge>
+                                    )}
+                                </div>
+                                <div className="flex items-center justify-between pt-3 border-t border-slate-50 dark:border-slate-800/50">
+                                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                        Dibuat: {new Date(user.createdAt).toLocaleDateString('id-ID')}
+                                    </span>
+                                    <div className="flex justify-end gap-1">
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            className="h-7 px-2 text-xs text-slate-600 dark:text-slate-300"
+                                            onClick={() => openEditDialog(user)}
+                                        >
+                                            <Pencil className="w-3 h-3 mr-1" /> Edit
+                                        </Button>
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            className="h-7 px-2 text-xs"
+                                            onClick={() => handleDelete(user.id)}
+                                            disabled={user.id === currentUserId || isDeleting === user.id}
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
             </div>
 

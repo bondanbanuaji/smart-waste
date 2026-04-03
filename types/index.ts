@@ -23,6 +23,7 @@ export interface DashboardData {
         totalOrganicToday: number;
         totalInorganicToday: number;
         totalEventThisWeek: number;
+        weeklyChartData: { label: string; organic: number; inorganic: number }[];
     };
     unreadNotificationCount: number;
 }

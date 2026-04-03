@@ -10,6 +10,7 @@ import { RecentEventTable } from "@/components/dashboard/RecentEventTable";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Scale, RefreshCw, BarChart4, TrendingUp } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 interface AlertItem {
     id: string;
@@ -19,10 +20,13 @@ interface AlertItem {
 }
 
 export default function DashboardPage() {
+    const { data: session } = useSession();
     const [data, setData] = useState<DashboardData | null>(null);
     const [recentEvents, setRecentEvents] = useState<WasteEventItem[]>([]);
     const [alerts, setAlerts] = useState<AlertItem[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const firstName = session?.user?.name?.split(' ')[0] || "User";
 
     const fetchDashboard = async () => {
         try {
@@ -119,14 +123,17 @@ export default function DashboardPage() {
         return <LoadingSkeleton />;
     }
 
-    const chartData = [
-        { label: "Hari Ini", organic: data?.stats.totalOrganicToday || 0, inorganic: data?.stats.totalInorganicToday || 0 },
-        // Mocking yesterday's data for comparison visually
-        { label: "Kemarin", organic: Math.floor((data?.stats.totalOrganicToday || 0) * 0.8), inorganic: Math.floor((data?.stats.totalInorganicToday || 0) * 1.2) },
-    ];
+    const chartData = data?.stats.weeklyChartData || [];
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+            <div className="flex flex-col gap-1 mb-6">
+                <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+                    Halo, {firstName}!
+                </h1>
+                <p className="text-slate-500 dark:text-slate-400">Berikut adalah status pembuangan sampah hari ini.</p>
+            </div>
+
             <AlertBanner
                 alerts={alerts.map(a => ({
                     deviceName: a.deviceName,
@@ -138,15 +145,15 @@ export default function DashboardPage() {
             />
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="Total Event Hari Ini" value={data?.stats.totalEventToday || 0} icon={<RefreshCw className="h-5 w-5 text-blue-500" />} />
-                <StatCard title="Sampah Organik (Wet)" value={data?.stats.totalOrganicToday || 0} icon={<Scale className="h-5 w-5 text-green-500" />} />
-                <StatCard title="Sampah Anorganik (Dry)" value={data?.stats.totalInorganicToday || 0} icon={<BarChart4 className="h-5 w-5 text-slate-500 dark:text-slate-400" />} />
-                <StatCard title="Minggu Ini" value={data?.stats.totalEventThisWeek || 0} icon={<TrendingUp className="h-5 w-5 text-indigo-500" />} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard title="Total Event Hari Ini" value={data?.stats.totalEventToday || 0} icon={<RefreshCw className="h-5 w-5 text-blue-100" />} gradient="from-blue-500 to-indigo-600" />
+                <StatCard title="Organik (Wet)" value={data?.stats.totalOrganicToday || 0} icon={<Scale className="h-5 w-5 text-green-100" />} gradient="from-emerald-500 to-green-600" />
+                <StatCard title="Anorganik (Dry)" value={data?.stats.totalInorganicToday || 0} icon={<BarChart4 className="h-5 w-5 text-slate-100" />} gradient="from-slate-600 to-slate-800" />
+                <StatCard title="Minggu Ini" value={data?.stats.totalEventThisWeek || 0} icon={<TrendingUp className="h-5 w-5 text-purple-100" />} gradient="from-violet-500 to-purple-600" />
             </div>
 
             {/* Capacity Cards (Living / Realtime) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pt-2">
                 {data?.devices.map(device => {
                     const cap = device.latestCapacity || { organicLevel: 0, inorganicLevel: 0, recordedAt: "" };
                     const isOnline = !!device.lastPingAt && (new Date().getTime() - new Date(device.lastPingAt).getTime() < 5 * 60000); // 5 mins
@@ -178,15 +185,19 @@ export default function DashboardPage() {
     );
 }
 
-function StatCard({ title, value, icon }: { title: string, value: number, icon: React.ReactNode }) {
+function StatCard({ title, value, icon, gradient }: { title: string, value: number, icon: React.ReactNode, gradient: string }) {
     return (
-        <Card className="border-none shadow-sm hover:shadow-md transition-shadow bg-card text-card-foreground">
-            <CardContent className="p-5 flex items-center justify-between">
+        <Card className={`border-none shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br ${gradient} text-white overflow-hidden relative group`}>
+            {/* Glossy decorative bloobs */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full blur-xl -ml-8 -mb-8" />
+
+            <CardContent className="p-5 flex items-center justify-between relative z-10">
                 <div className="space-y-1">
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-                    <p className="text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">{value}</p>
+                    <p className="text-sm font-medium text-white/80">{title}</p>
+                    <p className="text-3xl font-bold tracking-tight">{value}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center shadow-inner">
+                <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-inner">
                     {icon}
                 </div>
             </CardContent>

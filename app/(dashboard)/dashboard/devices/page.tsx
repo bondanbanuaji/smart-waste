@@ -15,7 +15,9 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
-import { Plus, Wifi, WifiOff, Cpu } from "lucide-react";
+import { Plus, Wifi, WifiOff, Cpu, Trash2 } from "lucide-react";
+import { useSSE } from "@/hooks/useSSE";
+import { SSEDataUpdate } from "@/types";
 
 interface DeviceItem {
     id: string;
@@ -23,6 +25,7 @@ interface DeviceItem {
     name: string;
     location: string;
     lastPingAt?: string | null;
+    capacityPreview?: { organic: number, inorganic: number };
 }
 
 export default function DevicesPage() {
@@ -52,6 +55,19 @@ export default function DevicesPage() {
     useEffect(() => {
         fetchDevices();
     }, []);
+
+    useSSE((update: SSEDataUpdate) => {
+        setDevices(prev => prev.map(d => {
+            if (d.id === update.deviceId) {
+                return {
+                    ...d,
+                    lastPingAt: new Date().toISOString(),
+                    capacityPreview: { organic: update.organicLevel, inorganic: update.inorganicLevel }
+                };
+            }
+            return d;
+        }));
+    });
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -168,14 +184,18 @@ export default function DevicesPage() {
                         const isOnline = !!device.lastPingAt && (new Date().getTime() - new Date(device.lastPingAt).getTime() < 5 * 60000);
 
                         return (
-                            <div key={device.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                                <div className="p-5 border-b border-slate-50 dark:border-slate-800">
+                            <div key={device.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden hover:shadow-md transition-shadow group relative">
+                                {isOnline && <div className="absolute top-0 right-0 w-24 h-24 bg-green-400/5 dark:bg-green-500/10 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none" />}
+
+                                <div className="p-5 border-b border-slate-50 dark:border-slate-800 relative z-10">
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex items-center gap-2">
-                                            <Cpu className="w-5 h-5 text-slate-400 dark:text-slate-500" />
-                                            <h3 className="font-bold text-slate-800 dark:text-slate-100">{device.deviceCode}</h3>
+                                            <div className="p-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
+                                                <Cpu className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                                            </div>
+                                            <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm tracking-tight">{device.deviceCode}</h3>
                                         </div>
-                                        <div className={`p-1.5 rounded-full ${isOnline ? 'bg-green-50 dark:bg-green-950/50 text-green-600 dark:text-green-500' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
+                                        <div className={`p-1.5 rounded-full shadow-sm border ${isOnline ? 'bg-green-50 dark:bg-green-950/50 text-green-600 dark:text-green-500 border-green-100 dark:border-green-900' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-100 dark:border-slate-700'}`}>
                                             {isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
                                         </div>
                                     </div>
@@ -185,18 +205,44 @@ export default function DevicesPage() {
                                     </p>
                                 </div>
 
+                                {device.capacityPreview && (
+                                    <div className="px-5 py-3 bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-50 dark:border-slate-800 space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                            <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${device.capacityPreview.organic}%` }} />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                            <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                <div className="h-full bg-slate-400 rounded-full transition-all duration-500" style={{ width: `${device.capacityPreview.inorganic}%` }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between text-xs">
-                                    <span className="text-slate-500 dark:text-slate-400 font-medium">Status</span>
+                                    <span className="text-slate-500 dark:text-slate-400 font-medium">Status Koneksi</span>
                                     {isOnline ? (
-                                        <span className="text-green-600 dark:text-green-500 font-semibold px-2 py-0.5 bg-green-100 dark:bg-green-950/80 rounded text-[10px] tracking-wide uppercase">Online</span>
+                                        <span className="text-green-600 dark:text-green-500 font-bold flex items-center gap-1.5">
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                            </span>
+                                            Terhubung
+                                        </span>
                                     ) : (
-                                        <span className="text-slate-500 dark:text-slate-400 font-semibold px-2 py-0.5 bg-slate-200 dark:bg-slate-800 rounded text-[10px] tracking-wide uppercase">Offline</span>
+                                        <span className="text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1.5">
+                                            <span className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-700" />
+                                            Terputus
+                                        </span>
                                     )}
                                 </div>
 
                                 <div className="px-4 py-3 bg-white dark:bg-slate-900 border-t border-slate-50 dark:border-slate-800 flex flex-col gap-0.5">
                                     <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wider">Terakhir Aktif</span>
-                                    <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                                    <span className="text-xs text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
                                         {device.lastPingAt ? formatRelativeTime(device.lastPingAt) : "Belum pernah aktif"}
                                     </span>
                                 </div>

@@ -68,7 +68,7 @@ export function CapacityCard({
                 <div className="space-y-2 relative">
                     <div className="flex justify-between items-end mb-1">
                         <div className="flex items-center gap-2">
-                            <div className="p-1 rounded bg-green-50 dark:bg-green-950/50">
+                            <div className="p-1.5 rounded-lg bg-green-50/80 dark:bg-green-950/50 shadow-sm border border-green-100 dark:border-green-900 border-b-2">
                                 <LeafIcon className="w-4 h-4 text-green-600 dark:text-green-500" />
                             </div>
                             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Organik (Wet)</span>
@@ -77,18 +77,19 @@ export function CapacityCard({
                             {organicLevel}%
                         </span>
                     </div>
-                    <Progress
-                        value={organicLevel}
-                        indicatorColor={getCapacityBgColor(organicLevel)}
-                        className="h-2.5 bg-slate-100 dark:bg-slate-800"
-                    />
+                    <div className="relative h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                        <div
+                            className={`h-full transition-all duration-1000 ease-in-out ${organicLevel > 80 ? 'bg-red-500' : 'bg-gradient-to-r from-emerald-400 to-green-500'}`}
+                            style={{ width: `${organicLevel}%` }}
+                        />
+                    </div>
                 </div>
 
                 {/* Inorganic Container */}
                 <div className="space-y-2 relative">
                     <div className="flex justify-between items-end mb-1">
                         <div className="flex items-center gap-2">
-                            <div className="p-1 rounded bg-slate-100 dark:bg-slate-800">
+                            <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 border-b-2">
                                 <Trash2 className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                             </div>
                             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Anorganik (Dry)</span>
@@ -97,11 +98,12 @@ export function CapacityCard({
                             {inorganicLevel}%
                         </span>
                     </div>
-                    <Progress
-                        value={inorganicLevel}
-                        indicatorColor={getCapacityBgColor(inorganicLevel)}
-                        className="h-2.5 bg-slate-100 dark:bg-slate-800"
-                    />
+                    <div className="relative h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                        <div
+                            className={`h-full transition-all duration-1000 ease-in-out ${inorganicLevel > 80 ? 'bg-red-500' : 'bg-gradient-to-r from-slate-400 to-slate-500 dark:from-slate-500 dark:to-slate-400'}`}
+                            style={{ width: `${inorganicLevel}%` }}
+                        />
+                    </div>
                 </div>
 
             </CardContent>

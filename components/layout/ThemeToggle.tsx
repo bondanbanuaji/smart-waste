@@ -13,11 +13,48 @@ export function ThemeToggle() {
     React.useEffect(() => setMounted(true), []);
     if (!mounted) return <div className="w-10 h-10" />;
 
+    const toggleTheme = (e: React.MouseEvent) => {
+        const nextTheme = theme === "dark" ? "light" : "dark";
+
+        // Fallback for browsers that don't support View Transitions
+        if (!document.startViewTransition) {
+            setTheme(nextTheme);
+            return;
+        }
+
+        const x = e.clientX;
+        const y = e.clientY;
+        const endRadius = Math.hypot(
+            Math.max(x, window.innerWidth - x),
+            Math.max(y, window.innerHeight - y)
+        );
+
+        const transition = document.startViewTransition(() => {
+            setTheme(nextTheme);
+        });
+
+        transition.ready.then(() => {
+            const clipPath = [
+                `circle(0px at ${x}px ${y}px)`,
+                `circle(${endRadius}px at ${x}px ${y}px)`,
+            ];
+
+            document.documentElement.animate(
+                { clipPath },
+                {
+                    duration: 3000,
+                    easing: "cubic-bezier(0.6, 0.05, 0.01, 0.99)",
+                    pseudoElement: "::view-transition-new(root)",
+                }
+            );
+        });
+    };
+
     return (
         <Button
             variant="ghost"
             size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={toggleTheme}
             className="w-10 h-10 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
             title="Toggle theme"
         >
