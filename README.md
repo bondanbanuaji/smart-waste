@@ -1,58 +1,64 @@
 # 🗑️ Smart Waste Management System
 
-Sistem manajemen sampah pintar berbasis IoT yang mengintegrasikan perangkat keras ESP32 dengan dashboard Fullstack Next.js secara realtime.
+Sistem manajemen sampah pintar terintegrasi berbasis **IoT (Internet of Things)** yang menghubungkan perangkat keras **Arduino Uno** dengan dashboard **Fullstack Next.js** secara *real-time*. Sistem ini dirancang untuk mengotomatisasi pemilahan sampah dan memantau kapasitas wadah secara akurat melalui jaringan lokal.
 
 ## 🚀 Fitur Utama
 
-- **Realtime Dashboard**: Pantau kapasitas wadah sampah secara langsung tanpa refresh halaman (Powered by SSE).
-*   **Klasifikasi Sampah Otomatis**: Membedakan sampah **Organik** dan **Anorganik** menggunakan sensor moisture.
-- **Sistem Notifikasi**: Peringatan otomatis "Segera Angkut!" jika kapasitas wadah mencapai ≥90%.
-- **History & Statistik**: Laporan riwayat pembuangan sampah lengkap dengan grafik tren harian/mingguan.
-- **Multitenant/Multi-device**: Mendukung banyak perangkat tempat sampah dalam satu dashboard.
+- **Real-time Monitoring Dashboard**: Visualisasi data statistik dan kapasitas wadah tanpa *delay* menggunakan teknologi **Server-Sent Events (SSE)**.
+- **Auto-Prepend History Feed**: Setiap aktivitas pembuangan sampah akan muncul secara instan di urutan teratas tabel riwayat tanpa perlu memuat ulang halaman.
+- **Klasifikasi Sampah Cerdas**: Memisahkan sampah secara otomatis menjadi kategori **Organik** dan **Anorganik** melalui sensor kelembapan.
+- **Sistem Notifikasi Bahaya**: Pengiriman peringatan otomatis (Pop-up/Alert) jika kapasitas salah satu wadah mencapai ambang batas kritis (≥90%).
+- **Dynamic Device Discovery**: Fitur *Plug & Play* yang memungkinkan unit tempat sampah menemukan IP Server secara otomatis di jaringan lokal (UDP Broadcast).
+- **Laporan Analitik**: Grafik mingguan interaktif untuk memantau tren volume sampah yang masuk.
 
-## 🛠️ Teknologi yang Digunakan
+## 🛠️ Arsitektur Teknologi
 
-### Website (Fullstack)
+### Website (Real-time Core)
 - **Framework**: Next.js 14 (App Router)
-- **Styling**: Tailwind CSS & shadcn/ui
-- **Database**: MySQL with Prisma ORM
-- **Realtime**: Server-Sent Events (SSE)
-- **Auth**: NextAuth.js
+- **Styling**: Tailwind CSS & Shadcn/UI (Premium Dark/Light Mode)
+- **Database**: MySQL dengan Prisma ORM
+- **Authentication**: NextAuth.js
+- **Streaming**: Server-Sent Events (SSE) untuk sinkronisasi data instan.
 
-### IoT (Hardware)
-- **Microcontroller**: ESP32 (DevKit V1)
-- **Sensors**: 2x HC-SR04 (Ultrasonic), Moisture Sensor
-- **Actuator**: Servo Motor (Pemilah sampah)
-- **Protocol**: HTTP POST (JSON)
+### IoT & Bridge (Hardware Interface)
+- **Microcontroller**: Arduino Uno R3
+- **Sensors**: Ultrasonic (Deteksi objek), Soil Moisture (Klasifikasi), Servo MG995 (Actuator).
+- **Secondary Server (Bridge)**: Node.js Serial Bridge (Penghubung antara komunikasi Serial USB Arduino ke REST API Next.js).
+- **Discovery Protocol**: UDP Discover (Port 8888 & 8889).
 
-## 📦 Persiapan Instalasi
+## 📦 Panduan Instalasi & Penggunaan
 
-### 1. Website Setup
-1. Clone repositori ini.
-2. Instal dependensi:
+### 1. Persiapan Website (Server Center)
+1. Clone repositori ini ke laptop server.
+2. Instal semua dependensi:
    ```bash
    npm install
    ```
-3. Sesuaikan file `.env.local` (gunakan `.env.example` sebagai referensi). Pastikan `DATABASE_URL` dan `NEXT_PUBLIC_SERVER_LOCAL_IP` sudah benar.
+3. Konfigurasi file `.env.local`:
+   - Sesuaikan `DATABASE_URL` dengan MySQL Anda.
+   - Atur `NEXT_PUBLIC_SERVER_LOCAL_IP` dengan IP lokal laptop Anda (misal: `192.168.150.161`).
 4. Jalankan migrasi database:
    ```bash
    npx prisma migrate dev
    ```
-5. Jalankan server:
+5. Jalankan aplikasi:
    ```bash
    npm run dev
    ```
 
-### 2. IoT Setup
-Panduan lengkap untuk konfigurasi ESP32 dapat ditemukan di:
-👉 **[Panduan Setup IoT (Bahasa Indonesia)](iot/setup_iot.md)**
+### 2. Persiapan IoT (Perangkat Keras)
+1. **Arduino**: Unggah firmware `smart_waste.ino` yang berada di folder `/iot` ke papan Arduino Uno.
+2. **Serial Bridge**: Script ini harus dijalankan di laptop yang terhubung ke USB Arduino.
+   - Pastikan Node.js terinstal.
+   - Masuk ke folder `/iot` dan jalankan:
+     ```bash
+     node serial_bridge.js
+     ```
+3. **Koneksi**: Script bridge akan secara otomatis mencari Server di jaringan lokal dan mulai mengirimkan data deteksi sampah.
 
-## 🌐 Integrasi Jaringan Lokal
-Sistem ini menggunakan fitur **UDP Auto-Discovery**:
-1. Laptop (Server) dan ESP32 wajib berada di **WiFi yang sama**.
-2. Anda **tidak perlu menginput IP laptop** ke dalam kodingan ESP32. Selama website sedang berjalan (`npm run dev`), ESP32 akan mencari dan menemukan IP laptop Anda secara otomatis.
-3. Cukup masukkan nama WiFi (SSID) dan Password di file `smart_waste.ino` sebelum melakukan upload.
-4. Jika koneksi gagal, pastikan Firewall laptop Anda memberikan izin untuk **Port UDP 8888**.
+## 🌐 Dokumentasi Teknis Lanjutan
+Informasi lebih mendalam mengenai skema kabel, pengaturan firewall, dan troubleshooting dapat diakses melalui dokumen berikut:
+👉 **[Panduan Integrasi Perangkat Keras (Bahasa Indonesia)](iot/setup_iot.md)**
 
 ---
-Dikembangkan oleh Tim Smart Waste 2026.
+**Smart Waste Project 2026** - *Mewujudkan Kebersihan yang Akurat dan Digital.*
