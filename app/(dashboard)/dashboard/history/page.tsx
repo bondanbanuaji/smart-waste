@@ -43,8 +43,27 @@ export default function HistoryPage() {
     }, [page, filterType]);
 
     useSSE((update: SSEDataUpdate) => {
-        if (!filterType || update.wasteType === filterType) {
-            setNewEventsCount(prev => prev + 1);
+        // Hanya proses jika ini adalah event (bukan ping) dan data sampah ada
+        if (update.type === "event" && update.wasteType) {
+            // Cek apakah sesuai filter
+            if (!filterType || update.wasteType === filterType) {
+                const newEvent: WasteEventItem = {
+                    id: Math.random().toString(36).substring(7), // Temporary ID
+                    deviceCode: update.deviceCode,
+                    deviceName: update.deviceName || "Device",
+                    wasteType: update.wasteType,
+                    moistureValue: update.moistureValue || 0,
+                    detectedAt: new Date().toISOString(),
+                };
+
+                // Auto-prepend ke daftar (hanya jika di halaman 1)
+                if (page === 1) {
+                    setEvents(prev => [newEvent, ...prev].slice(0, 20)); // Tetap limit 20
+                } else {
+                    // Jika tidak di halaman 1, cukup beri notifikasi banner
+                    setNewEventsCount(prev => prev + 1);
+                }
+            }
         }
     });
 

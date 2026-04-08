@@ -65,15 +65,19 @@ export interface CapacityDataPoint {
 export interface SSEDataUpdate {
     deviceId: string;
     deviceCode: string;
-    organicLevel: number;
-    inorganicLevel: number;
-    wasteType: WasteType;
-    hasAlert: boolean;
+    deviceName?: string;      // Tambahkan nama alat
+    type?: "event" | "ping";
+    organicLevel?: number;
+    inorganicLevel?: number;
+    wasteType?: WasteType;
+    moistureValue?: number;  // Tambahkan nilai kelembapan
+    hasAlert?: boolean;
     alertWadah?: WadahType;
 }
 
 export interface IoTPayload {
     deviceCode: string;
+    type?: "event" | "ping"; // Tambahkan tipe payload
     wasteType: WasteType;
     moistureValue: number;
     organicLevel: number;

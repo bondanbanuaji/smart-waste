@@ -9,14 +9,15 @@ export async function POST(req: NextRequest) {
 
         const {
             deviceCode,
+            type = "event", // Default ke event jika tidak ada
             wasteType,
             moistureValue,
             organicLevel,
             inorganicLevel,
         } = payload;
 
-        if (!deviceCode || !wasteType || organicLevel === undefined || inorganicLevel === undefined) {
-            return NextResponse.json({ success: false, error: "Invalid payload" }, { status: 400 });
+        if (!deviceCode) {
+            return NextResponse.json({ success: false, error: "Invalid payload: deviceCode missing" }, { status: 400 });
         }
 
         const device = await prisma.device.findUnique({
@@ -27,11 +28,27 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, error: "Device not found" }, { status: 404 });
         }
 
-        // 1. Update last ping
+        // 1. Update last ping (Berlaku untuk Event maupun Ping)
         await prisma.device.update({
             where: { id: device.id },
             data: { lastPingAt: new Date() },
         });
+
+        // Jika hanya PING, kirim SSE dan return
+        if (type === "ping") {
+            const pingUpdate: SSEDataUpdate = {
+                deviceId: device.id,
+                deviceCode: device.deviceCode,
+                type: "ping",
+            };
+            sse.emit("data-update", pingUpdate);
+            return NextResponse.json({ success: true, message: "Heartbeat received" });
+        }
+
+        // Validasi payload lengkap jika tipe adalah 'event'
+        if (!wasteType || organicLevel === undefined || inorganicLevel === undefined) {
+            return NextResponse.json({ success: false, error: "Invalid payload for event type" }, { status: 400 });
+        }
 
         // 2. Save waste event
         const wasteEvent = await prisma.wasteEvent.create({
@@ -98,9 +115,12 @@ export async function POST(req: NextRequest) {
         const updateData: SSEDataUpdate = {
             deviceId: device.id,
             deviceCode: device.deviceCode,
+            deviceName: device.name,
+            type: "event",
             organicLevel,
             inorganicLevel,
             wasteType,
+            moistureValue,
             hasAlert,
             alertWadah,
         };

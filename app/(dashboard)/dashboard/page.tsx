@@ -9,7 +9,7 @@ import { WasteBarChart } from "@/components/dashboard/WasteBarChart";
 import { RecentEventTable } from "@/components/dashboard/RecentEventTable";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { Scale, RefreshCw, BarChart4, TrendingUp } from "lucide-react";
+import { Activity, Leaf, Recycle, CalendarDays } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 interface AlertItem {
@@ -65,6 +65,8 @@ export default function DashboardPage() {
     }, []);
 
     useSSE((update: SSEDataUpdate) => {
+        const isPing = update.type === "ping";
+
         // Optimistic UI updates based on SSE
         setData((prev) => {
             if (!prev) return prev;
@@ -72,18 +74,20 @@ export default function DashboardPage() {
                 ...prev,
                 stats: {
                     ...prev.stats,
-                    totalEventToday: prev.stats.totalEventToday + 1,
+                    // Hanya tambah statistik jika ini adalah event sampah (bukan ping)
+                    totalEventToday: isPing ? prev.stats.totalEventToday : prev.stats.totalEventToday + 1,
                     totalOrganicToday: prev.stats.totalOrganicToday + (update.wasteType === "ORGANIC" ? 1 : 0),
                     totalInorganicToday: prev.stats.totalInorganicToday + (update.wasteType === "INORGANIC" ? 1 : 0),
+                    totalEventThisWeek: isPing ? prev.stats.totalEventThisWeek : prev.stats.totalEventThisWeek + 1,
                 },
                 devices: prev.devices.map(d => {
-                    if (d.id === update.deviceId) {
+                    if (d.id === update.deviceId || d.deviceCode === update.deviceCode) {
                         return {
                             ...d,
                             lastPingAt: new Date().toISOString(),
-                            latestCapacity: {
-                                organicLevel: update.organicLevel,
-                                inorganicLevel: update.inorganicLevel,
+                            latestCapacity: isPing ? d.latestCapacity : {
+                                organicLevel: update.organicLevel ?? d.latestCapacity?.organicLevel ?? 0,
+                                inorganicLevel: update.inorganicLevel ?? d.latestCapacity?.inorganicLevel ?? 0,
                                 recordedAt: new Date().toISOString(),
                             }
                         };
@@ -93,11 +97,44 @@ export default function DashboardPage() {
             };
         });
 
-        if (update.hasAlert) {
-            fetchAlerts(); // Re-fetch to get actual Notification ID
+        // Jika ada event sampah baru, tambahkan ke tabel Recent Events secara realtime
+        if (!isPing && update.wasteType) {
+            const newEvent: WasteEventItem = {
+                id: Math.random().toString(36).substring(7), // Temporary ID for UI
+                deviceCode: update.deviceCode,
+                deviceName: update.deviceName || "Device",
+                wasteType: update.wasteType,
+                moistureValue: update.moistureValue || 0,
+                detectedAt: new Date().toISOString(),
+            };
+            setRecentEvents(prev => [newEvent, ...prev].slice(0, 5));
+
+            // SINKRONISASI GRAFIK MINGGUAN (Realtime Bar Chart)
+            setData(prev => {
+                if (!prev) return prev;
+                const todayLabel = new Date().toLocaleDateString('id-ID', { weekday: 'short' });
+                const updatedChart = prev.stats.weeklyChartData.map(day => {
+                    if (day.label === todayLabel) {
+                        return {
+                            ...day,
+                            organic: day.organic + (update.wasteType === "ORGANIC" ? 1 : 0),
+                            inorganic: day.inorganic + (update.wasteType === "INORGANIC" ? 1 : 0)
+                        };
+                    }
+                    return day;
+                });
+                return {
+                    ...prev,
+                    stats: { ...prev.stats, weeklyChartData: updatedChart }
+                };
+            });
         }
 
-        fetchRecentEvents(); // Refresh event history table
+        if (update.hasAlert) {
+            fetchAlerts(); // Re-fetch untuk sinkronisasi notifikasi
+            // Increment unread notification count
+            setData(prev => prev ? { ...prev, unreadNotificationCount: prev.unreadNotificationCount + 1 } : prev);
+        }
     });
 
     const handleDismissAlert = async (id: string) => {
@@ -146,10 +183,10 @@ export default function DashboardPage() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="Total Event Hari Ini" value={data?.stats.totalEventToday || 0} icon={<RefreshCw className="h-5 w-5 text-blue-100" />} gradient="from-blue-500 to-indigo-600" />
-                <StatCard title="Organik (Wet)" value={data?.stats.totalOrganicToday || 0} icon={<Scale className="h-5 w-5 text-green-100" />} gradient="from-emerald-500 to-green-600" />
-                <StatCard title="Anorganik (Dry)" value={data?.stats.totalInorganicToday || 0} icon={<BarChart4 className="h-5 w-5 text-slate-100" />} gradient="from-slate-600 to-slate-800" />
-                <StatCard title="Minggu Ini" value={data?.stats.totalEventThisWeek || 0} icon={<TrendingUp className="h-5 w-5 text-purple-100" />} gradient="from-violet-500 to-purple-600" />
+                <StatCard title="Total Event Hari Ini" value={data?.stats.totalEventToday || 0} icon={<Activity className="h-5 w-5 text-sky-600 dark:text-sky-300" />} gradient="from-sky-100 to-blue-200 dark:from-sky-900/40 dark:to-blue-900/40" textClass="text-sky-900 dark:text-sky-50" />
+                <StatCard title="Organik (Wet)" value={data?.stats.totalOrganicToday || 0} icon={<Leaf className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />} gradient="from-emerald-100 to-teal-200 dark:from-emerald-900/40 dark:to-teal-900/40" textClass="text-emerald-900 dark:text-emerald-50" />
+                <StatCard title="Anorganik (Dry)" value={data?.stats.totalInorganicToday || 0} icon={<Recycle className="h-5 w-5 text-amber-600 dark:text-amber-300" />} gradient="from-orange-100 to-amber-200 dark:from-orange-900/40 dark:to-amber-900/40" textClass="text-amber-900 dark:text-amber-50" />
+                <StatCard title="Minggu Ini" value={data?.stats.totalEventThisWeek || 0} icon={<CalendarDays className="h-5 w-5 text-fuchsia-600 dark:text-fuchsia-300" />} gradient="from-fuchsia-100 to-pink-200 dark:from-fuchsia-900/40 dark:to-pink-900/40" textClass="text-fuchsia-900 dark:text-fuchsia-50" />
             </div>
 
             {/* Capacity Cards (Living / Realtime) */}
@@ -185,19 +222,19 @@ export default function DashboardPage() {
     );
 }
 
-function StatCard({ title, value, icon, gradient }: { title: string, value: number, icon: React.ReactNode, gradient: string }) {
+function StatCard({ title, value, icon, gradient, textClass = "text-slate-800 dark:text-slate-100" }: { title: string, value: number, icon: React.ReactNode, gradient: string, textClass?: string }) {
     return (
-        <Card className={`border-none shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br ${gradient} text-white overflow-hidden relative group`}>
+        <Card className={`border border-white/40 dark:border-white/10 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br ${gradient} overflow-hidden relative group`}>
             {/* Glossy decorative bloobs */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full blur-xl -ml-8 -mb-8" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/40 dark:bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/5 dark:bg-black/20 rounded-full blur-xl -ml-8 -mb-8" />
 
             <CardContent className="p-5 flex items-center justify-between relative z-10">
-                <div className="space-y-1">
-                    <p className="text-sm font-medium text-white/80">{title}</p>
-                    <p className="text-3xl font-bold tracking-tight">{value}</p>
+                <div className={`space-y-1 ${textClass}`}>
+                    <p className="text-sm font-semibold opacity-80">{title}</p>
+                    <p className="text-3xl font-extrabold tracking-tight drop-shadow-sm">{value}</p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm border border-white/10 flex items-center justify-center shadow-inner">
+                <div className="h-12 w-12 rounded-full bg-white/60 dark:bg-black/20 backdrop-blur-sm border border-white/40 dark:border-white/10 flex items-center justify-center shadow-sm">
                     {icon}
                 </div>
             </CardContent>

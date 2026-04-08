@@ -15,7 +15,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
-import { Plus, Wifi, WifiOff, Cpu, Trash2 } from "lucide-react";
+import { Plus, Wifi, WifiOff, Cpu, Trash2, Search, Radar, CheckCircle2, Pencil, AlertTriangle } from "lucide-react";
 import { useSSE } from "@/hooks/useSSE";
 import { SSEDataUpdate } from "@/types";
 
@@ -32,6 +32,8 @@ export default function DevicesPage() {
     const [devices, setDevices] = useState<DeviceItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null); // ID device yang akan dihapus
+    const [selectedDevice, setSelectedDevice] = useState<DeviceItem | null>(null);
 
     // Form state
     const [deviceCode, setDeviceCode] = useState("");
@@ -39,6 +41,11 @@ export default function DevicesPage() {
     const [location, setLocation] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Discovery Scan state
+    const [nearbyDevices, setNearbyDevices] = useState<any[]>([]);
+    const [isScanning, setIsScanning] = useState(false);
+    const [isScanDocsOpen, setIsScanDocsOpen] = useState(false);
 
     const fetchDevices = async () => {
         try {
@@ -52,50 +59,121 @@ export default function DevicesPage() {
         }
     };
 
+    const fetchNearby = async () => {
+        try {
+            const res = await fetch("/api/devices/nearby");
+            const json = await res.json();
+            if (json.data) setNearbyDevices(json.data);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     useEffect(() => {
         fetchDevices();
     }, []);
 
+    // Sinkronisasi scan saat dialog dibuka
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isScanning) {
+            fetchNearby();
+            interval = setInterval(fetchNearby, 3000);
+        }
+        return () => clearInterval(interval);
+    }, [isScanning]);
+
     useSSE((update: SSEDataUpdate) => {
         setDevices(prev => prev.map(d => {
-            if (d.id === update.deviceId) {
+            if (d.id === update.deviceId || d.deviceCode === update.deviceCode) {
+                const isPing = update.type === "ping";
                 return {
                     ...d,
                     lastPingAt: new Date().toISOString(),
-                    capacityPreview: { organic: update.organicLevel, inorganic: update.inorganicLevel }
+                    // Update level hanya jika datanya ada (bukan sekedar ping)
+                    capacityPreview: isPing ? d.capacityPreview : { 
+                        organic: update.organicLevel ?? d.capacityPreview?.organic ?? 0, 
+                        inorganic: update.inorganicLevel ?? d.capacityPreview?.inorganic ?? 0 
+                    }
                 };
             }
             return d;
         }));
     });
 
-    const handleCreate = async (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         setError(null);
 
+        const isEditing = !!selectedDevice;
+        const url = isEditing ? `/api/devices/${selectedDevice.id}` : "/api/devices";
+        const method = isEditing ? "PATCH" : "POST";
+
         try {
-            const res = await fetch("/api/devices", {
-                method: "POST",
+            const res = await fetch(url, {
+                method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ deviceCode, name, location }),
             });
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data.error || "Gagal menambahkan device");
+                throw new Error(data.error || "Gagal menyimpan device");
             }
 
-            setDevices([data.data, ...devices]);
-            setIsDialogOpen(false);
-            setDeviceCode("");
-            setName("");
-            setLocation("");
+            if (isEditing) {
+                setDevices(prev => prev.map(d => d.id === selectedDevice.id ? { ...d, ...data.data } : d));
+            } else {
+                setDevices([data.data, ...devices]);
+            }
+            
+            closeDialog();
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleDelete = async (id: string) => {
+        setIsSubmitting(true);
+        try {
+            const res = await fetch(`/api/devices/${id}`, { method: "DELETE" });
+            if (!res.ok) throw new Error("Gagal menghapus device");
+            
+            setDevices(prev => prev.filter(d => d.id !== id));
+            setIsDeleting(null);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : "Terjadi kesalahan");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const openCreateDialog = () => {
+        setSelectedDevice(null);
+        setDeviceCode("");
+        setName("");
+        setLocation("");
+        setIsDialogOpen(true);
+    };
+
+    const openEditDialog = (device: DeviceItem) => {
+        setSelectedDevice(device);
+        setDeviceCode(device.deviceCode);
+        setName(device.name);
+        setLocation(device.location);
+        setIsDialogOpen(true);
+    };
+
+    const closeDialog = () => {
+        setIsDialogOpen(false);
+        setSelectedDevice(null);
+        setDeviceCode("");
+        setName("");
+        setLocation("");
+        setError(null);
     };
 
     return (
@@ -105,24 +183,105 @@ export default function DevicesPage() {
                     <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Manajemen Device</h1>
                     <p className="text-slate-500 dark:text-slate-400">Kelola dan pantau seluruh unit smart waste bin (ESP32).</p>
                 </div>
+            </div>
 
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="bg-green-600 hover:bg-green-700 text-white shadow-md">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Tambah Device
-                        </Button>
-                    </DialogTrigger>
+                <div className="flex items-center gap-2">
+                    <Dialog open={isScanning} onOpenChange={setIsScanning}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-semibold">
+                                <Radar className="w-4 h-4 mr-2 text-green-500 animate-pulse" />
+                                Scan Device Sekitar
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px] bg-white dark:bg-slate-950 border-slate-100 dark:border-slate-800 shadow-2xl">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-xl">
+                                    <div className="relative flex h-3 w-3 mr-1">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                    </div>
+                                    Mendeteksi Unit...
+                                </DialogTitle>
+                                <DialogDescription className="text-slate-500 dark:text-slate-400">
+                                    Mencari alat di jaringan lokal <strong>192.168.150.x</strong> secara otomatis.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="py-6 space-y-4">
+                                {nearbyDevices.length === 0 ? (
+                                    <div className="py-12 text-center space-y-4 transition-all animate-in fade-in zoom-in duration-500">
+                                        <div className="relative mx-auto w-24 h-24">
+                                            <div className="absolute inset-0 rounded-full bg-green-500/10 dark:bg-green-500/20 animate-ping duration-1000" />
+                                            <div className="absolute inset-4 rounded-full bg-green-500/20 dark:bg-green-500/30 animate-pulse" />
+                                            <Search className="w-10 h-10 text-green-600 relative z-10 mx-auto top-7" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Menunggu Sinyal...</p>
+                                            <p className="text-xs text-slate-500">Pastikan <code>serial_bridge.js</code> sedang berjalan.</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                                        <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400 dark:text-slate-500 mb-2">Unit Ditemukan</p>
+                                        {nearbyDevices.map((device) => (
+                                            <div key={device.deviceCode} className="group flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl hover:bg-white dark:hover:bg-slate-900 hover:border-green-200 dark:hover:border-green-900/50 transition-all duration-300">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="p-2.5 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform">
+                                                        <Cpu className="w-5 h-5 text-green-600" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-slate-800 dark:text-slate-100">{device.deviceCode}</h4>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <span className="text-[10px] bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-400 font-mono">{device.ip}</span>
+                                                            <span className="text-[10px] text-slate-400 dark:text-slate-500">● {device.type}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {device.isRegistered ? (
+                                                    <div className="flex items-center gap-1.5 text-[10px] text-green-600 bg-green-50 dark:bg-green-950/50 px-3 py-1.5 rounded-full font-bold border border-green-100 dark:border-green-900/50">
+                                                        <CheckCircle2 className="w-3 h-3" />
+                                                        AKTIF
+                                                    </div>
+                                                ) : (
+                                                    <Button 
+                                                        size="sm" 
+                                                        className="bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-sm h-8 px-4 font-bold text-xs"
+                                                        onClick={() => {
+                                                            setDeviceCode(device.deviceCode);
+                                                            setName(device.deviceCode + " New");
+                                                            setIsScanning(false);
+                                                            setIsDialogOpen(true);
+                                                        }}
+                                                    >
+                                                        Hubungkan
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isDialogOpen} onOpenChange={(open) => !open && closeDialog()}>
+                        <DialogTrigger asChild>
+                            <Button className="bg-green-600 hover:bg-green-700 text-white shadow-md" onClick={openCreateDialog}>
+                                <Plus className="w-4 h-4 mr-2" />
+                                Tambah Device
+                            </Button>
+                        </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
-                            <DialogTitle>Registrasi Device Baru</DialogTitle>
+                            <DialogTitle>{selectedDevice ? "Edit Detail Device" : "Registrasi Device Baru"}</DialogTitle>
                             <DialogDescription>
-                                Masukkan detail ESP32 baru untuk dihubungkan ke sistem.
+                                {selectedDevice ? "Perbarui informasi unit yang sudah terdaftar." : "Masukkan detail ESP32 baru untuk dihubungkan ke sistem."}
                             </DialogDescription>
                         </DialogHeader>
-                        <form onSubmit={handleCreate}>
+                        <form onSubmit={handleSave}>
                             <div className="grid gap-4 py-4">
-                                {error && <div className="text-sm text-red-500 bg-red-50 p-3 rounded-lg">{error}</div>}
+                                {error && <div className="text-sm text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">{error}</div>}
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="deviceCode">Kode Device</Label>
@@ -159,14 +318,35 @@ export default function DevicesPage() {
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
+                                <Button type="button" variant="outline" onClick={closeDialog} disabled={isSubmitting}>
                                     Batal
                                 </Button>
                                 <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={isSubmitting}>
-                                    {isSubmitting ? "Menyimpan..." : "Simpan Device"}
+                                    {isSubmitting ? "Menyimpan..." : (selectedDevice ? "Simpan Perubahan" : "Simpan Device")}
                                 </Button>
                             </DialogFooter>
                         </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Dialog Konfirmasi Hapus */}
+                <Dialog open={!!isDeleting} onOpenChange={(open) => !open && setIsDeleting(null)}>
+                    <DialogContent className="sm:max-w-[400px]">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-red-600">
+                                <AlertTriangle className="w-5 h-5" />
+                                Hapus Unit?
+                            </DialogTitle>
+                            <DialogDescription className="py-2">
+                                Tindakan ini akan menghapus permanen alat <strong>{devices.find(d => d.id === isDeleting)?.name}</strong> beserta seluruh log riwayat sampahnya.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <Button variant="outline" onClick={() => setIsDeleting(null)} disabled={isSubmitting}>Batal</Button>
+                            <Button variant="destructive" onClick={() => isDeleting && handleDelete(isDeleting)} disabled={isSubmitting}>
+                                {isSubmitting ? "Menghapus..." : "Ya, Hapus Permanen"}
+                            </Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>
@@ -195,8 +375,24 @@ export default function DevicesPage() {
                                             </div>
                                             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm tracking-tight">{device.deviceCode}</h3>
                                         </div>
-                                        <div className={`p-1.5 rounded-full shadow-sm border ${isOnline ? 'bg-green-50 dark:bg-green-950/50 text-green-600 dark:text-green-500 border-green-100 dark:border-green-900' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-100 dark:border-slate-700'}`}>
-                                            {isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+                                        <div className="flex items-center gap-1.5">
+                                            <button 
+                                                onClick={() => openEditDialog(device)}
+                                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors"
+                                                title="Edit Device"
+                                            >
+                                                <Pencil className="h-3.5 w-3.5" />
+                                            </button>
+                                            <button 
+                                                onClick={() => setIsDeleting(device.id)}
+                                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+                                                title="Hapus Device"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                            <div className={`ml-1 p-1.5 rounded-full shadow-sm border ${isOnline ? 'bg-green-50 dark:bg-green-950/50 text-green-600 dark:text-green-500 border-green-100 dark:border-green-900' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-100 dark:border-slate-700'}`}>
+                                                {isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+                                            </div>
                                         </div>
                                     </div>
                                     <h4 className="font-semibold text-slate-700 dark:text-slate-200 line-clamp-1">{device.name}</h4>
