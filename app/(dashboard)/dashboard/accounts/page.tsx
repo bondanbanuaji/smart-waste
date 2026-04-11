@@ -39,6 +39,7 @@ interface UserItem {
     name: string;
     email: string;
     role: "ADMIN" | "OFFICER";
+    image: string | null;
     createdAt: string;
 }
 
@@ -299,9 +300,17 @@ export default function AccountsPage() {
                                     <TableRow key={user.id} className="group transition-colors border-slate-100 dark:border-slate-800/50">
                                         <TableCell className="font-medium text-slate-900 dark:text-slate-100">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                                                    <UserIcon className="w-4 h-4" />
-                                                </div>
+                                                {user.image ? (
+                                                    <img 
+                                                        src={user.image} 
+                                                        alt={user.name} 
+                                                        className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 object-cover bg-white" 
+                                                    />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                                                        <UserIcon className="w-4 h-4" />
+                                                    </div>
+                                                )}
                                                 {user.name}
                                                 {user.id === currentUserId && (
                                                     <Badge variant="outline" className="text-[10px] py-0 h-4 border-green-200 text-green-600 bg-green-50 dark:bg-green-950/30">Anda</Badge>
@@ -371,9 +380,17 @@ export default function AccountsPage() {
                             <div key={user.id} className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-3">
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
-                                            <UserIcon className="w-5 h-5" />
-                                        </div>
+                                        {user.image ? (
+                                            <img
+                                                src={user.image}
+                                                alt={user.name}
+                                                className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 object-cover bg-white shrink-0"
+                                            />
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+                                                <UserIcon className="w-5 h-5" />
+                                            </div>
+                                        )}
                                         <div className="flex flex-col">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{user.name}</span>

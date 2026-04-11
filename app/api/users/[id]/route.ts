@@ -62,10 +62,11 @@ export async function PUT(
             updateData.password = await bcrypt.hash(password, 10);
         }
 
-        const updatedUser = await prisma.user.update({
+        const updatedUser: any = await prisma.user.update({
             where: { id },
             data: updateData,
-            select: { id: true, name: true, email: true, role: true, createdAt: true },
+            // @ts-ignore
+            select: { id: true, name: true, email: true, role: true, image: true, createdAt: true },
         });
 
         return NextResponse.json({

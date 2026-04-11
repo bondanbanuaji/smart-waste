@@ -1,0 +1,135 @@
+GET error: PrismaClientValidationError: 
+Invalid `prisma.user.findUnique()` invocation:
+
+{
+  where: {
+    id: "cmngdywqq0000s888odo559vr"
+  },
+  select: {
+    id: true,
+    name: true,
+    email: true,
+    role: true,
+    image: true,
+    ~~~~~
+    createdAt: true,
+?   password?: true,
+?   updatedAt?: true
+  }
+}
+
+Unknown field `image` for select statement on model `User`. Available options are marked with ?.
+    at wn (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:29:1363)
+    at $n.handleRequestError (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:121:6958)
+    at $n.handleAndLogRequestError (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async GET (webpack-internal:///(rsc)/./app/api/profile/route.ts:40:22)
+    at async /home/boba/Projects/smart-waste/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:57228
+    at async eT.execute (/home/boba/Projects/smart-waste/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:46851)
+    at async eT.handle (/home/boba/Projects/smart-waste/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:58760)
+    at async doRender (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1496:28)
+    at async DevServer.renderPageComponent (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1962:32)
+    at async DevServer.pipeImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/home/boba/Projects/smart-waste/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:818:17)
+    at async /home/boba/Projects/smart-waste/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/home/boba/Projects/smart-waste/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/home/boba/Projects/smart-waste/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/router-server.js:179:21)
+    at async handleRequest (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/router-server.js:359:24)
+    at async requestHandlerImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/router-server.js:383:13)
+    at async Server.requestListener (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/start-server.js:141:13)
+GET error: PrismaClientValidationError: 
+Invalid `prisma.user.findUnique()` invocation:
+
+{
+  where: {
+    id: "cmngdywqq0000s888odo559vr"
+  },
+  select: {
+    id: true,
+    name: true,
+    email: true,
+    role: true,
+    image: true,
+    ~~~~~
+    createdAt: true,
+?   password?: true,
+?   updatedAt?: true
+  }
+}
+
+Unknown field `image` for select statement on model `User`. Available options are marked with ?.
+    at wn (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:29:1363)
+    at $n.handleRequestError (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:121:6958)
+    at $n.handleAndLogRequestError (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async GET (webpack-internal:///(rsc)/./app/api/profile/route.ts:40:22)
+    at async /home/boba/Projects/smart-waste/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:57228
+    at async eT.execute (/home/boba/Projects/smart-waste/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:46851)
+    at async eT.handle (/home/boba/Projects/smart-waste/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:58760)
+    at async doRender (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1496:28)
+    at async DevServer.renderPageComponent (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1962:32)
+    at async DevServer.pipeImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/home/boba/Projects/smart-waste/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:818:17)
+    at async /home/boba/Projects/smart-waste/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/home/boba/Projects/smart-waste/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/home/boba/Projects/smart-waste/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/router-server.js:179:21)
+    at async handleRequest (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/router-server.js:359:24)
+    at async requestHandlerImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/router-server.js:383:13)
+    at async Server.requestListener (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/start-server.js:141:13)
+Avatar POST error: PrismaClientValidationError: 
+Invalid `prisma.user.update()` invocation:
+
+{
+  where: {
+    id: "cmngdywqq0000s888odo559vr"
+  },
+  data: {
+    image: "/uploads/avatars/cmngdywqq0000s888odo559vr-1775895487139.blob",
+    ~~~~~
+?   id?: String | StringFieldUpdateOperationsInput,
+?   name?: String | StringFieldUpdateOperationsInput,
+?   email?: String | StringFieldUpdateOperationsInput,
+?   password?: String | StringFieldUpdateOperationsInput,
+?   role?: Role | EnumRoleFieldUpdateOperationsInput,
+?   createdAt?: DateTime | DateTimeFieldUpdateOperationsInput,
+?   updatedAt?: DateTime | DateTimeFieldUpdateOperationsInput
+  }
+}
+
+Unknown argument `image`. Did you mean `name`? Available options are marked with ?.
+    at wn (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:29:1363)
+    at $n.handleRequestError (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:121:6958)
+    at $n.handleAndLogRequestError (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/home/boba/Projects/smart-waste/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async POST (webpack-internal:///(rsc)/./app/api/profile/avatar/route.ts:85:9)
+    at async /home/boba/Projects/smart-waste/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:57228
+    at async eT.execute (/home/boba/Projects/smart-waste/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:46851)
+    at async eT.handle (/home/boba/Projects/smart-waste/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:58760)
+    at async doRender (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1366:42)
+    at async cacheEntry.responseCache.get.routeKind (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1588:28)
+    at async DevServer.renderToResponseWithComponentsImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1496:28)
+    at async DevServer.renderPageComponent (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1924:24)
+    at async DevServer.renderToResponseImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:1962:32)
+    at async DevServer.pipeImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:922:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/home/boba/Projects/smart-waste/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/base-server.js:818:17)
+    at async /home/boba/Projects/smart-waste/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/home/boba/Projects/smart-waste/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/home/boba/Projects/smart-waste/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/router-server.js:179:21)
+    at async handleRequest (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/router-server.js:359:24)
+    at async requestHandlerImpl (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/router-server.js:383:13)
+    at async Server.requestListener (/home/boba/Projects/smart-waste/node_modules/next/dist/server/lib/start-server.js:141:13)
