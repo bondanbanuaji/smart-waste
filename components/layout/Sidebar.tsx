@@ -151,7 +151,6 @@ export function Sidebar() {
                                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-1">{userName}</p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{session?.user?.email}</p>
                             </div>
-                            <Settings className="w-4 h-4 text-slate-400 group-hover:text-green-500 dark:group-hover:text-green-400 transition-colors shrink-0" />
                         </Link>
                     )}
 
