@@ -65,10 +65,10 @@ function AlertBanner({ alert }: { alert: AlertState }) {
 }
 
 const tabs = [
-    { id: "profile" as TabType, label: "Profil", icon: User, emoji: "👤" },
-    { id: "name" as TabType, label: "Ubah Nama", icon: Pencil, emoji: "✏️" },
-    { id: "security" as TabType, label: "Keamanan", icon: Lock, emoji: "🔐" },
-    { id: "avatar" as TabType, label: "Foto Profil", icon: Camera, emoji: "📸" },
+    { id: "profile" as TabType, label: "Profil", icon: User },
+    { id: "name" as TabType, label: "Ubah Nama", icon: Pencil },
+    { id: "security" as TabType, label: "Keamanan", icon: Lock },
+    { id: "avatar" as TabType, label: "Foto Profil", icon: Camera },
 ];
 
 export default function SettingsPage() {
@@ -127,7 +127,7 @@ export default function SettingsPage() {
             if (!res.ok) return showAlert("error", data.error || "Gagal memperbarui nama");
             setProfile(prev => prev ? { ...prev, name: data.data.name } : prev);
             await updateSession({ name: data.data.name });
-            showAlert("success", "Nama berhasil diperbarui! ✨");
+            showAlert("success", "Nama berhasil diperbarui!");
         } finally { setIsSubmitting(false); }
     };
 
@@ -142,7 +142,7 @@ export default function SettingsPage() {
             const data = await res.json();
             if (!res.ok) return showAlert("error", data.error || "Gagal mengubah password");
             setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
-            showAlert("success", "Password berhasil diubah! 🔐");
+            showAlert("success", "Password berhasil diubah!");
         } finally { setIsSubmitting(false); }
     };
 
@@ -197,16 +197,16 @@ export default function SettingsPage() {
             // Sync dengan NEXT AUTH Session agar seisi aplikasi reload profile pic nya
             await updateSession({ image: data.imageUrl });
             
-            showAlert("success", "Foto profil berhasil diperbarui! 📸");
+            showAlert("success", "Foto profil berhasil diperbarui!");
         } finally { setIsSubmitting(false); }
     };
 
     const getPasswordStrength = (pwd: string) => {
         if (!pwd) return { color: "bg-slate-300 dark:bg-slate-600", label: "", width: "w-0" };
-        if (pwd.length < 6) return { color: "bg-red-500", label: "Lemah 😬", width: "w-1/4" };
-        if (pwd.length < 10) return { color: "bg-yellow-500", label: "Lumayan 🤔", width: "w-2/4" };
-        if (pwd.length < 14) return { color: "bg-green-500", label: "Kuat 💪", width: "w-3/4" };
-        return { color: "bg-emerald-500", label: "Sangat Kuat 🔥", width: "w-full" };
+        if (pwd.length < 6) return { color: "bg-red-500", label: "Lemah", width: "w-1/4" };
+        if (pwd.length < 10) return { color: "bg-yellow-500", label: "Sedang", width: "w-2/4" };
+        if (pwd.length < 14) return { color: "bg-green-500", label: "Kuat", width: "w-3/4" };
+        return { color: "bg-emerald-500", label: "Sangat Kuat", width: "w-full" };
     };
     const pwdStrength = getPasswordStrength(newPassword);
 
@@ -290,7 +290,6 @@ export default function SettingsPage() {
                     {/* Info */}
                     <div className="text-center sm:text-left text-white">
                         <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
-                            <Sparkles className="w-4 h-4 text-lime-300 animate-pulse" />
                             <span className="text-xs font-bold uppercase tracking-widest text-white/70">Pengaturan Akun</span>
                         </div>
                         <h1 className="text-3xl sm:text-4xl font-black tracking-tight drop-shadow-sm">
@@ -320,7 +319,7 @@ export default function SettingsPage() {
                                 : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/50"
                         }`}
                     >
-                        <span className="text-base">{tab.emoji}</span>
+                        <tab.icon className="w-4 h-4" />
                         <span className="hidden sm:block">{tab.label}</span>
                     </button>
                 ))}
@@ -406,7 +405,7 @@ export default function SettingsPage() {
                                 disabled={isSubmitting || name === profile?.name}
                                 className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-green-500/25 hover:shadow-green-500/40 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
                             >
-                                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                                {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mr-2" />}
                                 Simpan Perubahan
                             </button>
                         </form>
@@ -422,7 +421,7 @@ export default function SettingsPage() {
                             </div>
                             <div>
                                 <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">Keamanan</h2>
-                                <p className="text-xs text-slate-500">Jaga akun kamu tetap aman 🔐</p>
+                                <p className="text-xs text-slate-500">Jaga akun kamu tetap aman</p>
                             </div>
                         </div>
 
@@ -473,7 +472,7 @@ export default function SettingsPage() {
                                 disabled={isSubmitting}
                                 className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-green-500/25 hover:shadow-green-500/40 hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 mt-2"
                             >
-                                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
+                                {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mr-2" />}
                                 Ubah Password
                             </button>
                         </form>
@@ -525,7 +524,7 @@ export default function SettingsPage() {
                                 <Upload className={`w-7 h-7 transition-colors ${isDragging ? "text-white" : "text-slate-400 group-hover:text-green-600"}`} />
                             </div>
                             <p className="text-sm font-black text-slate-700 dark:text-slate-300">
-                                {isDragging ? "🌿 Lepaskan untuk Upload!" : "Klik atau Seret Foto ke Sini"}
+                                {isDragging ? "Lepaskan untuk Upload!" : "Klik atau Seret Foto ke Sini"}
                             </p>
                             <p className="text-xs text-slate-400 mt-1">Pilih area crop dengan rasio 1:1.</p>
                             <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
@@ -538,7 +537,7 @@ export default function SettingsPage() {
                                 disabled={isSubmitting}
                                 className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-green-500/25 hover:shadow-green-500/40 hover:scale-[1.01] disabled:opacity-50 text-base"
                             >
-                                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                                {isSubmitting && <Loader2 className="w-5 h-5 animate-spin mr-2" />}
                                 Upload Foto Profil
                             </button>
                         )}

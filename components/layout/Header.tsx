@@ -14,6 +14,7 @@ export function Header() {
         if (pathname === "/dashboard/history") return "Riwayat Pembuangan";
         if (pathname === "/dashboard/devices") return "Manajemen Device";
         if (pathname === "/dashboard/accounts") return "Kelola Akun";
+        if (pathname === "/dashboard/settings") return "Pengaturan Akun";
         return "Dashboard";
     };
 
