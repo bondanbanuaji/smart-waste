@@ -178,7 +178,7 @@ export function Sidebar() {
                             onClick={() => signOut({ callbackUrl: "/login" })}
                             title="Keluar"
                             className={cn(
-                                "flex items-center px-3 py-2 text-sm font-medium text-red-600 dark:text-red-500 rounded-lg hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-400 transition-colors group overflow-hidden whitespace-nowrap",
+                                "flex items-center px-3 py-2 text-sm font-medium text-red-600 dark:text-red-500 rounded-lg hover:bg-red-500/50 hover:text-red-100 dark:hover:text-red-400 transition-colors group overflow-hidden whitespace-nowrap",
                                 (isCollapsed && !isMobileMenuOpen) ? "w-10 h-10 justify-center p-0" : "flex-1 gap-3"
                             )}
                         >
