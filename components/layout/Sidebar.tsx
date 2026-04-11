@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, History, Smartphone, LogOut, Menu, X, Users } from "lucide-react";
+import { LayoutDashboard, History, Smartphone, LogOut, Menu, X, Users, Settings } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useLayout } from "./LayoutContext";
+import Image from "next/image";
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -15,11 +16,16 @@ export function Sidebar() {
     const role = (session?.user as { role?: string })?.role;
     const [isCollapsed, setIsCollapsed] = useState(false);
     const { isMobileMenuOpen, setMobileMenuOpen } = useLayout();
+    
+    const userImage = session?.user?.image || null;
 
     // Close mobile menu on route change
     useEffect(() => {
         setMobileMenuOpen(false);
     }, [pathname, setMobileMenuOpen]);
+
+    const userName = session?.user?.name || "Pengguna";
+    const userInitials = userName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
     const routes = [
         {
@@ -50,6 +56,14 @@ export function Sidebar() {
             active: pathname === "/dashboard/accounts",
         });
     }
+
+    // Settings tersedia untuk semua role
+    routes.push({
+        label: "Pengaturan",
+        icon: Settings,
+        href: "/dashboard/settings",
+        active: pathname === "/dashboard/settings",
+    });
 
     return (
         <>
@@ -117,12 +131,49 @@ export function Sidebar() {
                 </div>
 
                 <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+                    {/* Avatar + User Info - Klik untuk ke Settings */}
                     {(!isCollapsed || isMobileMenuOpen) && (
-                        <div className="mb-4 px-2">
-                            <p className="text-sm font-medium text-slate-800 dark:text-slate-100 line-clamp-1">{session?.user?.name}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{session?.user?.email}</p>
-                        </div>
+                        <Link
+                            href="/dashboard/settings"
+                            className="group flex items-center gap-3 px-2 py-2.5 mb-3 rounded-xl hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-100 dark:hover:border-slate-700 transition-all"
+                        >
+                            {/* Avatar */}
+                            <div className="w-9 h-9 rounded-full shrink-0 overflow-hidden ring-2 ring-white dark:ring-slate-800 shadow-sm">
+                                {userImage ? (
+                                    <Image src={userImage} alt={userName} width={36} height={36} className="object-cover w-full h-full" unoptimized />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-xs font-bold select-none">
+                                        {userInitials}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-1">{userName}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{session?.user?.email}</p>
+                            </div>
+                            <Settings className="w-4 h-4 text-slate-400 group-hover:text-green-500 dark:group-hover:text-green-400 transition-colors shrink-0" />
+                        </Link>
                     )}
+
+                    {/* Collapsed state: Just the avatar */}
+                    {isCollapsed && !isMobileMenuOpen && (
+                        <Link
+                            href="/dashboard/settings"
+                            className="flex justify-center mb-3"
+                            title="Pengaturan Profil"
+                        >
+                            <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white dark:ring-slate-800 shadow-sm hover:ring-green-500 transition-all">
+                                {userImage ? (
+                                    <Image src={userImage} alt={userName} width={40} height={40} className="object-cover w-full h-full" unoptimized />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-xs font-bold select-none">
+                                        {userInitials}
+                                    </div>
+                                )}
+                            </div>
+                        </Link>
+                    )}
+
                     <div className={cn("flex items-center gap-2", (isCollapsed && !isMobileMenuOpen) ? "flex-col justify-center" : "justify-between")}>
                         <button
                             onClick={() => signOut({ callbackUrl: "/login" })}

@@ -36,7 +36,7 @@ Sistem manajemen sampah pintar terintegrasi berbasis **IoT (Internet of Things)*
    ```
 3. Konfigurasi file `.env.local`:
    - Sesuaikan `DATABASE_URL` dengan MySQL Anda.
-   - Atur `NEXT_PUBLIC_SERVER_LOCAL_IP` dengan IP lokal laptop Anda (misal: `192.168.150.161`).
+   - Atur `NEXT_PUBLIC_SERVER_LOCAL_IP` dengan IP lokal laptop Anda (misal: `192.168.150.162`).
 4. Jalankan migrasi database:
    ```bash
    npx prisma migrate dev

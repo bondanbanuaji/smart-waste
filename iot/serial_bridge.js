@@ -76,21 +76,23 @@ function startDiscoveryHeartbeat() {
     });
 }
 
-// 2b. HTTP Status Heartbeat (Agar Dashboard Menunjukkan Status "Terhubung" Hijau)
 function startStatusHeartbeat() {
-    setInterval(async () => {
+    const sendPing = async () => {
         if (serverFound && API_URL) {
             try {
-                // console.log('💓 Sending status heartbeat...');
+                console.log('💓 Sending status heartbeat...');
                 await axios.post(API_URL, {
                     deviceCode: DEVICE_CODE,
                     type: 'ping'
                 });
             } catch (error) {
-                // console.error('⚠️ Heartbeat failed');
+                console.error('⚠️ Heartbeat failed:', error.message);
             }
         }
-    }, 30000); // Setiap 30 detik
+    };
+    
+    sendPing(); // Eksekusi langsung
+    setInterval(sendPing, 30000); // Eksekusi setiap 30 detik
 }
 
 async function findArduinoPort() {

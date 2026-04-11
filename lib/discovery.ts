@@ -20,7 +20,7 @@ class DiscoveryService {
 
     private BROADCAST_PORT = 8888; // Port untuk server menyiarkan IP-nya
     private LISTEN_PORT = 8889;    // Port untuk server mendengarkan device di sekitar
-    // Subnet 192.168.150.255 (Server IP: 192.168.150.161)
+    // Subnet 192.168.150.255 (Server IP: 192.168.150.162)
     private BROADCAST_ADDR = "192.168.150.255"; 
 
     public start() {
@@ -76,8 +76,8 @@ class DiscoveryService {
     }
 
     private broadcast() {
-        // Menggunakan IP yang Anda informasikan (192.168.1.10)
-        const serverIp = process.env.NEXT_PUBLIC_SERVER_LOCAL_IP || "192.168.1.10";
+        // Menggunakan IP yang Anda informasikan (192.168.150.162)
+        const serverIp = process.env.NEXT_PUBLIC_SERVER_LOCAL_IP || "192.168.150.162";
         const serverPort = process.env.NEXT_PUBLIC_SERVER_PORT || "3000";
         
         const message = JSON.stringify({

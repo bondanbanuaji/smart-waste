@@ -72,6 +72,9 @@ export async function POST(req: NextRequest) {
         const ALERT_THRESHOLD = parseInt(process.env.CAPACITY_ALERT_THRESHOLD || "90", 10);
         let hasAlert = false;
         let alertWadah: WadahType | undefined;
+        let notificationId: string | undefined;
+        let notificationCreatedAt: string | undefined;
+        let capacityValue: number | undefined;
 
         // Check organic
         if (organicLevel >= ALERT_THRESHOLD) {
@@ -79,7 +82,7 @@ export async function POST(req: NextRequest) {
                 where: { deviceId: device.id, wadahType: "ORGANIC", isRead: false },
             });
             if (!existingUnread) {
-                await prisma.notification.create({
+                const newNotif = await prisma.notification.create({
                     data: {
                         deviceId: device.id,
                         wadahType: "ORGANIC",
@@ -89,6 +92,9 @@ export async function POST(req: NextRequest) {
                 });
                 hasAlert = true;
                 alertWadah = "ORGANIC";
+                notificationId = newNotif.id;
+                notificationCreatedAt = newNotif.createdAt.toISOString();
+                capacityValue = organicLevel;
             }
         }
 
@@ -98,7 +104,7 @@ export async function POST(req: NextRequest) {
                 where: { deviceId: device.id, wadahType: "INORGANIC", isRead: false },
             });
             if (!existingUnread) {
-                await prisma.notification.create({
+                const newNotif = await prisma.notification.create({
                     data: {
                         deviceId: device.id,
                         wadahType: "INORGANIC",
@@ -108,6 +114,9 @@ export async function POST(req: NextRequest) {
                 });
                 hasAlert = true;
                 alertWadah = "INORGANIC";
+                notificationId = newNotif.id;
+                notificationCreatedAt = newNotif.createdAt.toISOString();
+                capacityValue = inorganicLevel;
             }
         }
 
@@ -123,6 +132,9 @@ export async function POST(req: NextRequest) {
             moistureValue,
             hasAlert,
             alertWadah,
+            notificationId,
+            notificationCreatedAt,
+            capacityValue,
         };
 
         sse.emit("data-update", updateData);

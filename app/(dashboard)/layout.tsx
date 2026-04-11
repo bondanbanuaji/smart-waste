@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { LayoutProvider } from "@/components/layout/LayoutContext";
+import InactivityLogout from "@/components/auth/InactivityLogout";
 
 export const metadata: Metadata = {
     title: {
@@ -17,6 +18,7 @@ export default function DashboardLayout({
 }) {
     return (
         <LayoutProvider>
+            <InactivityLogout />
             <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 text-foreground overflow-hidden font-sans selection:bg-green-200">
                 <Sidebar />
                 <div className="flex-1 flex flex-col overflow-hidden relative w-full transition-all">

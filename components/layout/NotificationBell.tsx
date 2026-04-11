@@ -39,7 +39,23 @@ export function NotificationBell() {
         eventSource.addEventListener("data-update", (e: MessageEvent) => {
             const payload = JSON.parse(e.data);
             if (payload.hasAlert) {
-                fetchNotifications();
+                // Realtime Sync: Buat item notifikasi baru dari payload
+                const newNotification: NotificationItem = {
+                    id: payload.notificationId || Math.random().toString(),
+                    deviceName: payload.deviceName || "Device",
+                    wadahType: payload.alertWadah || "ORGANIC",
+                    capacityValue: payload.capacityValue || 90,
+                    isRead: false,
+                    createdAt: payload.notificationCreatedAt || new Date().toISOString(),
+                };
+
+                // Prepend ke list dan update count secara instan
+                setNotifications(prev => {
+                    // Cek apakah ID sudah ada untuk menghindari duplikasi
+                    if (prev.some(n => n.id === newNotification.id)) return prev;
+                    return [newNotification, ...prev];
+                });
+                setUnreadCount(prev => prev + 1);
             }
         });
 

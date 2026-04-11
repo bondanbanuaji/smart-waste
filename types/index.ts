@@ -73,6 +73,9 @@ export interface SSEDataUpdate {
     moistureValue?: number;  // Tambahkan nilai kelembapan
     hasAlert?: boolean;
     alertWadah?: WadahType;
+    notificationId?: string;       // ID notifikasi baru
+    notificationCreatedAt?: string; // Waktu notifikasi dibuat
+    capacityValue?: number;         // Nilai kapasitas saat notifikasi muncul
 }
 
 export interface IoTPayload {
