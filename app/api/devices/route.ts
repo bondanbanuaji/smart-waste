@@ -42,10 +42,11 @@ export async function POST(req: NextRequest) {
                 name,
                 location,
                 isActive: true,
+                lastPingAt: new Date(), // Langsung set online saat pertama ditambahkan!
             },
         });
 
-        return NextResponse.json({ success: true, data: { ...newDevice, createdAt: newDevice.createdAt.toISOString(), lastPingAt: null } });
+        return NextResponse.json({ success: true, data: { ...newDevice, createdAt: newDevice.createdAt.toISOString(), lastPingAt: newDevice.lastPingAt?.toISOString() } });
     } catch (error) {
         console.error("Devices API POST error:", error);
         return NextResponse.json({ error: "Internal Error" }, { status: 500 });

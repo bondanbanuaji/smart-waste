@@ -46,6 +46,9 @@ export default function DevicesPage() {
     const [nearbyDevices, setNearbyDevices] = useState<any[]>([]);
     const [isScanning, setIsScanning] = useState(false);
     const [isScanDocsOpen, setIsScanDocsOpen] = useState(false);
+    
+    // Force re-render state for accurate real-time online status
+    const [currentTime, setCurrentTime] = useState(Date.now());
 
     const fetchDevices = async () => {
         try {
@@ -82,6 +85,12 @@ export default function DevicesPage() {
         }
         return () => clearInterval(interval);
     }, [isScanning]);
+
+    // Force UI re-render setiap 10 detik agar status Terhubung/Terputus update seketika waktu berlalu
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(Date.now()), 10000);
+        return () => clearInterval(timer);
+    }, []);
 
     useSSE((update: SSEDataUpdate) => {
         setDevices(prev => prev.map(d => {
@@ -361,7 +370,7 @@ export default function DevicesPage() {
                     </div>
                 ) : (
                     devices.map((device) => {
-                        const isOnline = !!device.lastPingAt && (new Date().getTime() - new Date(device.lastPingAt).getTime() < 5 * 60000);
+                        const isOnline = !!device.lastPingAt && (currentTime - new Date(device.lastPingAt).getTime() < 5 * 60000);
 
                         return (
                             <div key={device.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden hover:shadow-md transition-shadow group relative">
