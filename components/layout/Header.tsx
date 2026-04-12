@@ -11,10 +11,10 @@ export function Header() {
 
     const getTitle = () => {
         if (pathname === "/dashboard") return "Dashboard";
-        if (pathname === "/dashboard/history") return "Riwayat Pembuangan";
-        if (pathname === "/dashboard/devices") return "Manajemen Device";
-        if (pathname === "/dashboard/accounts") return "Kelola Akun";
-        if (pathname === "/dashboard/settings") return "Pengaturan Akun";
+        if (pathname === "/dashboard/history") return "Riwayat";
+        if (pathname === "/dashboard/devices") return "Device";
+        if (pathname === "/dashboard/accounts") return "Akun";
+        if (pathname === "/dashboard/settings") return "Pengaturan";
         return "Dashboard";
     };
 
@@ -28,7 +28,6 @@ export function Header() {
                 >
                     <Menu className="w-5 h-5" />
                 </button>
-                <img src="/logo.png" className="w-8 h-8 rounded-lg shadow-sm hidden sm:block" alt="Logo" />
                 <h2 className="text-base sm:text-lg font-semibold text-slate-800 dark:text-slate-100">{getTitle()}</h2>
             </div>
             <div className="flex items-center gap-4">
