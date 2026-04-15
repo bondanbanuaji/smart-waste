@@ -9,17 +9,21 @@ export async function GET() {
             orderBy: { createdAt: "desc" },
         });
 
-        // Quick transform for dates to ISO strings for client compatibility
+        // Safer transform focusing on only serializable fields
         const formatted = devices.map(d => ({
-            ...d,
-            lastPingAt: d.lastPingAt?.toISOString() || null,
+            id: d.id,
+            deviceCode: d.deviceCode,
+            name: d.name,
+            location: d.location,
+            isActive: d.isActive,
+            lastPingAt: d.lastPingAt ? d.lastPingAt.toISOString() : null,
             createdAt: d.createdAt.toISOString(),
         }));
 
         return NextResponse.json({ data: formatted });
     } catch (error) {
         console.error("Devices API GET error:", error);
-        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Internal Error" }, { status: 500 });
     }
 }
 

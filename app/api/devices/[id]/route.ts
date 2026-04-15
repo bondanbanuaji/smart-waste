@@ -36,6 +36,15 @@ export async function PATCH(
             },
         });
 
+        // Broadcast perubahan metadata ke semua client via SSE
+        const { sse } = require("@/lib/sse");
+        sse.emit("data-update", {
+            deviceId: updated.id,
+            deviceCode: updated.deviceCode,
+            deviceName: updated.name,
+            type: "ping", // Gunakan tipe ping agar client memperbarui metadata mereka
+        });
+
         return NextResponse.json({ success: true, data: updated });
     } catch (error) {
         console.error("Device API PATCH error:", error);

@@ -17,6 +17,7 @@ import {
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { Plus, Wifi, WifiOff, Cpu, Trash2, Search, Radar, CheckCircle2, Pencil, AlertTriangle } from "lucide-react";
 import { useSSE } from "@/hooks/useSSE";
+import { useTTS } from "@/hooks/useTTS";
 import { SSEDataUpdate } from "@/types";
 
 interface DeviceItem {
@@ -87,27 +88,50 @@ export default function DevicesPage() {
     }, [isScanning]);
 
     // Force UI re-render setiap 10 detik agar status Terhubung/Terputus update seketika waktu berlalu
+    const { speak } = useTTS();
+
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(Date.now()), 10000);
         return () => clearInterval(timer);
     }, []);
 
     useSSE((update: SSEDataUpdate) => {
-        setDevices(prev => prev.map(d => {
-            if (d.id === update.deviceId || d.deviceCode === update.deviceCode) {
-                const isPing = update.type === "ping";
-                return {
-                    ...d,
-                    lastPingAt: new Date().toISOString(),
-                    // Update level hanya jika datanya ada (bukan sekedar ping)
-                    capacityPreview: isPing ? d.capacityPreview : { 
-                        organic: update.organicLevel ?? d.capacityPreview?.organic ?? 0, 
-                        inorganic: update.inorganicLevel ?? d.capacityPreview?.inorganic ?? 0 
-                    }
-                };
+        setDevices(prev => {
+            // 🔊 Text-to-Speech: Umumkan jenis sampah (Fullstack Sync)
+            if (update.type !== "ping" && update.wasteType) {
+                const jenis = update.wasteType === "ORGANIC" ? "organik" : "anorganik";
+                const rawName = update.deviceName || update.deviceCode;
+                let spokenName = rawName.toLowerCase().replace(/[-_]/g, " ");
+                if (spokenName.includes("arduino") || spokenName.includes("ard")) {
+                    spokenName = spokenName.replace(/arduino|ard/g, "ardu ino");
+                }
+                speak(`Sampah ${jenis} terdeteksi pada ${spokenName}`);
             }
-            return d;
-        }));
+
+            const exists = prev.some(d => d.id === update.deviceId || d.deviceCode === update.deviceCode);
+            
+            // Jika device baru (Auto-Registered), refresh list dari server
+            if (!exists) {
+                fetchDevices();
+                return prev;
+            }
+
+            return prev.map(d => {
+                if (d.id === update.deviceId || d.deviceCode === update.deviceCode) {
+                    const isPing = update.type === "ping";
+                    return {
+                        ...d,
+                        name: update.deviceName || d.name, // Update nama secara realtime
+                        lastPingAt: update.lastPingAt || new Date().toISOString(),
+                        capacityPreview: isPing ? d.capacityPreview : { 
+                            organic: update.organicLevel ?? d.capacityPreview?.organic ?? 0, 
+                            inorganic: update.inorganicLevel ?? d.capacityPreview?.inorganic ?? 0 
+                        }
+                    };
+                }
+                return d;
+            });
+        });
     });
 
     const handleSave = async (e: React.FormEvent) => {
@@ -212,7 +236,7 @@ export default function DevicesPage() {
                                     Mendeteksi Unit...
                                 </DialogTitle>
                                 <DialogDescription className="text-slate-500 dark:text-slate-400">
-                                    Mencari alat di jaringan lokal <strong>192.168.150.x</strong> secara otomatis.
+                                    Mencari alat di jaringan lokal <strong>{(process.env.NEXT_PUBLIC_SERVER_LOCAL_IP || "192.168.1.1").split('.').slice(0, 3).join('.')}.x</strong> secara otomatis.
                                 </DialogDescription>
                             </DialogHeader>
 
@@ -300,8 +324,14 @@ export default function DevicesPage() {
                                         value={deviceCode}
                                         onChange={(e) => setDeviceCode(e.target.value)}
                                         required
+                                        disabled={!!selectedDevice} // Kunci jika sedang edit
+                                        className={selectedDevice ? "bg-slate-50 dark:bg-slate-900/50 cursor-not-allowed" : ""}
                                     />
-                                    <p className="text-xs text-slate-500">Kode unik ini harus sama dengan yang diprogram di ESP32.</p>
+                                    <p className="text-xs text-slate-500">
+                                        {selectedDevice 
+                                            ? "Kode hardware tidak dapat diubah saat edit. Hapus dan scan ulang jika ingin mengganti kode." 
+                                            : "Kode unik ini harus sama dengan yang diprogram di ESP32."}
+                                    </p>
                                 </div>
 
                                 <div className="grid gap-2">
@@ -370,7 +400,7 @@ export default function DevicesPage() {
                     </div>
                 ) : (
                     devices.map((device) => {
-                        const isOnline = !!device.lastPingAt && (currentTime - new Date(device.lastPingAt).getTime() < 5 * 60000);
+                        const isOnline = !!device.lastPingAt && (currentTime - new Date(device.lastPingAt).getTime() < 60000);
 
                         return (
                             <div key={device.id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden hover:shadow-md transition-shadow group relative">

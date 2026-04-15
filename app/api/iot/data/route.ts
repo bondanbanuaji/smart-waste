@@ -20,18 +20,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, error: "Invalid payload: deviceCode missing" }, { status: 400 });
         }
 
-        const device = await prisma.device.findUnique({
+        // 1. Ambil atau buat device secara otomatis (Auto-Registration)
+        const device = await prisma.device.upsert({
             where: { deviceCode },
-        });
-
-        if (!device) {
-            return NextResponse.json({ success: false, error: "Device not found" }, { status: 404 });
-        }
-
-        // 1. Update last ping (Berlaku untuk Event maupun Ping)
-        await prisma.device.update({
-            where: { id: device.id },
-            data: { lastPingAt: new Date() },
+            update: { lastPingAt: new Date() },
+            create: {
+                deviceCode,
+                name: deviceCode, // Default name set to deviceCode
+                location: "Lokasi belum ditentukan",
+                isActive: true,
+                lastPingAt: new Date(),
+            },
         });
 
         // Jika hanya PING, kirim SSE dan return
@@ -40,9 +39,27 @@ export async function POST(req: NextRequest) {
                 deviceId: device.id,
                 deviceCode: device.deviceCode,
                 type: "ping",
+                lastPingAt: new Date().toISOString(),
             };
             sse.emit("data-update", pingUpdate);
             return NextResponse.json({ success: true, message: "Heartbeat received" });
+        }
+
+        // Jika OFFLINE (Signal dari bridge saat dimatikan)
+        if (type === "offline") {
+            await prisma.device.update({
+                where: { id: device.id },
+                data: { lastPingAt: new Date(0) }, // Set to Unix Epoch (1970) to force offline
+            });
+            
+            const offlineUpdate: SSEDataUpdate = {
+                deviceId: device.id,
+                deviceCode: device.deviceCode,
+                type: "ping", // Use ping type to trigger status update in UI
+                lastPingAt: new Date(0).toISOString(),
+            };
+            sse.emit("data-update", offlineUpdate);
+            return NextResponse.json({ success: true, message: "Device set to offline" });
         }
 
         // Validasi payload lengkap jika tipe adalah 'event'

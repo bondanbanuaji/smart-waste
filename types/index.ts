@@ -75,12 +75,13 @@ export interface SSEDataUpdate {
     alertWadah?: WadahType;
     notificationId?: string;       // ID notifikasi baru
     notificationCreatedAt?: string; // Waktu notifikasi dibuat
-    capacityValue?: number;         // Nilai kapasitas saat notifikasi muncul
+    capacityValue?: number;
+    lastPingAt?: string;
 }
 
 export interface IoTPayload {
     deviceCode: string;
-    type?: "event" | "ping"; // Tambahkan tipe payload
+    type?: "event" | "ping" | "offline";
     wasteType: WasteType;
     moistureValue: number;
     organicLevel: number;

@@ -20,8 +20,6 @@ class DiscoveryService {
 
     private BROADCAST_PORT = 8888; // Port untuk server menyiarkan IP-nya
     private LISTEN_PORT = 8889;    // Port untuk server mendengarkan device di sekitar
-    // Subnet 192.168.150.255 (Server IP: 192.168.150.162)
-    private BROADCAST_ADDR = "192.168.150.255"; 
 
     public start() {
         this.startBroadcaster();
@@ -39,7 +37,7 @@ class DiscoveryService {
             // PENTING: Harus setBroadcast agar diizinkan menyebar ke jaringan
             this.broadcastSocket?.setBroadcast(true);
             console.log("🚀 Discovery Broadcaster started on port", this.BROADCAST_PORT);
-            this.broadcastInterval = setInterval(() => this.broadcast(), 5000);
+            this.broadcastInterval = setInterval(() => this.broadcast(), 2000);
         });
     }
 
@@ -75,18 +73,27 @@ class DiscoveryService {
         });
     }
 
+    private getBroadcastAddr(): string {
+        const serverIp = process.env.NEXT_PUBLIC_SERVER_LOCAL_IP || "192.168.1.1";
+        const parts = serverIp.split('.');
+        if (parts.length === 4) {
+            return `${parts[0]}.${parts[1]}.${parts[2]}.255`;
+        }
+        return "255.255.255.255";
+    }
+
     private broadcast() {
-        // Menggunakan IP yang Anda informasikan (192.168.150.162)
-        const serverIp = process.env.NEXT_PUBLIC_SERVER_LOCAL_IP || "192.168.150.162";
+        const serverIp = process.env.NEXT_PUBLIC_SERVER_LOCAL_IP || "192.168.1.1";
         const serverPort = process.env.NEXT_PUBLIC_SERVER_PORT || "3000";
+        const broadcastAddr = this.getBroadcastAddr();
         
         const message = JSON.stringify({
-            app: "smart-waste",
+            app: 'smart-waste',
             ip: serverIp,
             port: parseInt(serverPort, 10)
         });
 
-        this.broadcastSocket?.send(message, 0, message.length, this.BROADCAST_PORT, this.BROADCAST_ADDR);
+        this.broadcastSocket?.send(message, 0, message.length, this.BROADCAST_PORT, broadcastAddr);
     }
 
     public getNearbyDevices(): NearbyDevice[] {

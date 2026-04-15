@@ -13,7 +13,7 @@ const dgram = require('dgram');
 const BAUD_RATE = 9600;
 const SERVER_BROADCAST_PORT = 8888; // Port untuk mendengarkan server
 const DISCOVERY_PORT = 8889;        // Port untuk memberi tahu server kita online
-const BROADCAST_ADDR = '192.168.150.255'; // Subnet broadcast Anda
+const BROADCAST_ADDR = '192.168.1.255'; // SESUAIKAN: Alamat broadcast subnet Anda (biasanya diakhiri .255)
 const DEVICE_CODE = 'ARDUINO-01';
 
 // Variabel Dinamis
@@ -21,7 +21,7 @@ let API_URL = '';
 let serverFound = false;
 
 console.log('🚀 Smart Waste Serial Bridge Starting...');
-console.log('🔍 Mencari Server di jaringan (192.168.150.x)...');
+console.log('🔍 Mencari Server di jaringan lokal...');
 
 /**
  * STEP 1: Mencari Server secara Dinamis via UDP
@@ -157,6 +157,29 @@ async function startBridge() {
         console.error('❌ Gagal Bridge:', err.message);
     }
 }
+
+/**
+ * STEP 3: Handle Graceful Shutdown
+ * Mengirim sinyal offline ke server saat script dimatikan (Ctrl+C)
+ */
+async function handleShutdown() {
+    if (serverFound && API_URL) {
+        console.log('\n🛑 Shutting down... Sending offline signal...');
+        try {
+            await axios.post(API_URL, {
+                deviceCode: DEVICE_CODE,
+                type: 'offline'
+            });
+            console.log('✅ Offline signal sent.');
+        } catch (error) {
+            console.error('⚠️ Failed to send offline signal:', error.message);
+        }
+    }
+    process.exit(0);
+}
+
+process.on('SIGINT', handleShutdown);
+process.on('SIGTERM', handleShutdown);
 
 // Mulai dari mendengarkan server
 listenForServer();

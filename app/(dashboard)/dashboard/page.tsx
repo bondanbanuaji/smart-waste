@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSSE } from "@/hooks/useSSE";
+import { useTTS } from "@/hooks/useTTS";
 import { DashboardData, SSEDataUpdate, WasteEventItem } from "@/types";
 import { CapacityCard } from "@/components/dashboard/CapacityCard";
 import { AlertBanner } from "@/components/dashboard/AlertBanner";
@@ -27,6 +28,7 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
 
     const firstName = session?.user?.name?.split(' ')[0] || "User";
+    const { speak } = useTTS();
 
     const fetchDashboard = async () => {
         try {
@@ -67,6 +69,21 @@ export default function DashboardPage() {
     useSSE((update: SSEDataUpdate) => {
         const isPing = update.type === "ping";
 
+        // 🔊 Text-to-Speech: Umumkan jenis sampah yang terdeteksi
+        if (!isPing && update.wasteType) {
+            const jenis = update.wasteType === "ORGANIC" ? "organik" : "anorganik";
+            // Transform nama device agar dibaca natural (bukan dieja per huruf)
+            const rawName = update.deviceName || update.deviceCode;
+            let spokenName = rawName.toLowerCase().replace(/[-_]/g, " ");
+            
+            // Fix khusus untuk Arduino agar tidak dieja "A-R-D"
+            if (spokenName.includes("arduino") || spokenName.includes("ard")) {
+                spokenName = spokenName.replace(/arduino|ard/g, "ardu ino");
+            }
+            
+            speak(`Sampah ${jenis} terdeteksi pada ${spokenName}`);
+        }
+
         // Optimistic UI updates based on SSE
         setData((prev) => {
             if (!prev) return prev;
@@ -84,7 +101,8 @@ export default function DashboardPage() {
                     if (d.id === update.deviceId || d.deviceCode === update.deviceCode) {
                         return {
                             ...d,
-                            lastPingAt: new Date().toISOString(),
+                            name: update.deviceName || d.name, // Update nama secara realtime
+                            lastPingAt: update.lastPingAt || new Date().toISOString(),
                             latestCapacity: isPing ? d.latestCapacity : {
                                 organicLevel: update.organicLevel ?? d.latestCapacity?.organicLevel ?? 0,
                                 inorganicLevel: update.inorganicLevel ?? d.latestCapacity?.inorganicLevel ?? 0,
@@ -193,7 +211,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pt-2">
                 {data?.devices.map(device => {
                     const cap = device.latestCapacity || { organicLevel: 0, inorganicLevel: 0, recordedAt: "" };
-                    const isOnline = !!device.lastPingAt && (new Date().getTime() - new Date(device.lastPingAt).getTime() < 5 * 60000); // 5 mins
+                    const isOnline = !!device.lastPingAt && (new Date().getTime() - new Date(device.lastPingAt).getTime() < 60000); // 1 min (lebih responsif)
 
                     return (
                         <CapacityCard
