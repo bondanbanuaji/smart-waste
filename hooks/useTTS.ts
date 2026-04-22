@@ -10,54 +10,54 @@ interface TTSOptions {
 
 /**
  * Hook untuk Text-to-Speech menggunakan Web SpeechSynthesis API.
- * Otomatis memilih suara perempuan Indonesia jika tersedia.
  */
 export function useTTS(options?: TTSOptions) {
     const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
     const lastSpokenRef = useRef<number>(0);
-
     const { lang = "id-ID", rate = 1.0, pitch = 1.0 } = options || {};
 
-    // Cari dan simpan suara perempuan Indonesia
+    const loadVoices = useCallback(() => {
+        if (typeof window === "undefined" || !window.speechSynthesis) return;
+        const voices = speechSynthesis.getVoices();
+        if (voices.length === 0) return;
+
+        // Prioritas: Suara Indonesia perempuan
+        const idFemale = voices.find(
+            (v) => v.lang.startsWith("id") && (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("perempuan"))
+        );
+        const idAny = voices.find((v) => v.lang.startsWith("id"));
+        const anyFemale = voices.find(
+            (v) => v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("woman")
+        );
+
+        voiceRef.current = idFemale || idAny || anyFemale || voices[0] || null;
+    }, []);
+
     useEffect(() => {
         if (typeof window === "undefined" || !window.speechSynthesis) return;
 
-        const loadVoices = () => {
-            const voices = speechSynthesis.getVoices();
-            
-            // Prioritas: Suara Indonesia perempuan
-            const idFemale = voices.find(
-                (v) => v.lang.startsWith("id") && v.name.toLowerCase().includes("female")
-            );
-            // Fallback: Suara Indonesia apapun
-            const idAny = voices.find((v) => v.lang.startsWith("id"));
-            // Fallback: Suara perempuan bahasa apapun
-            const anyFemale = voices.find(
-                (v) => v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("woman")
-            );
-
-            voiceRef.current = idFemale || idAny || anyFemale || voices[0] || null;
-        };
-
         loadVoices();
-        // Beberapa browser memuat voices secara async
-        speechSynthesis.onvoiceschanged = loadVoices;
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
 
         return () => {
-            speechSynthesis.onvoiceschanged = null;
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = null;
+            }
         };
-    }, []);
+    }, [loadVoices]);
 
     const speak = useCallback(
         (text: string) => {
             if (typeof window === "undefined" || !window.speechSynthesis) return;
 
-            // Debounce: jangan bicara jika jarak < 1.5 detik dari ucapan sebelumnya
+            // Jangan bicara jika jarak < 1 detik untuk menghindari suara tumpuk
             const now = Date.now();
-            if (now - lastSpokenRef.current < 1500) return;
+            if (now - lastSpokenRef.current < 1000) return;
             lastSpokenRef.current = now;
 
-            // Cancel ucapan yang sedang berjalan agar tidak tumpuk
+            // Pastikan cancel dulu sebelum bicara baru
             speechSynthesis.cancel();
 
             const utterance = new SpeechSynthesisUtterance(text);
@@ -70,7 +70,10 @@ export function useTTS(options?: TTSOptions) {
                 utterance.voice = voiceRef.current;
             }
 
-            speechSynthesis.speak(utterance);
+            // Patch untuk browser mobile: panggil speak dalam event loop terpisah
+            setTimeout(() => {
+                speechSynthesis.speak(utterance);
+            }, 50);
         },
         [lang, rate, pitch]
     );

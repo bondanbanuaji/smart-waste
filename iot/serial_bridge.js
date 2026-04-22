@@ -79,14 +79,33 @@ function startDiscoveryHeartbeat() {
     });
 }
 
+/**
+ * Helper: Dapatkan IP lokal bridge ini agar server tahu harus kirim command kemana
+ */
+function getLocalIp() {
+    const os = require('os');
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            // Skip internal (loopback) dan non-IPv4
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return '127.0.0.1';
+}
+
 function startStatusHeartbeat() {
     const sendPing = async () => {
         if (serverFound && API_URL) {
             try {
-                console.log('💓 Sending status heartbeat...');
+                const localIp = getLocalIp();
+                console.log(`💓 Sending heartbeat (bridgeIp: ${localIp})...`);
                 await axios.post(API_URL, {
                     deviceCode: DEVICE_CODE,
-                    type: 'ping'
+                    type: 'ping',
+                    bridgeIp: localIp  // Kirim IP asli bridge ke server
                 });
             } catch (error) {
                 console.error('⚠️ Heartbeat failed:', error.message);
@@ -179,6 +198,9 @@ async function startBridge() {
                 try {
                     const jsonString = line.split('DATA_START:')[1].split(':DATA_END')[0];
                     const data = JSON.parse(jsonString);
+                    
+                    // Tambahkan IP bridge agar server tahu harus kirim command kemana
+                    data.bridgeIp = getLocalIp();
 
                     console.log('📡 Mengirim ke Server...');
                     const response = await axios.post(API_URL, data);

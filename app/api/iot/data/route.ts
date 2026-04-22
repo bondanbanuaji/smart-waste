@@ -14,21 +14,41 @@ export async function POST(req: NextRequest) {
             moistureValue,
             organicLevel,
             inorganicLevel,
+            bridgeIp,       // IP yang dikirim oleh bridge secara eksplisit
         } = payload;
 
-        if (!deviceCode) {
-            return NextResponse.json({ success: false, error: "Invalid payload: deviceCode missing" }, { status: 400 });
+        // Prioritas IP: 
+        // 1. bridgeIp dari payload (paling akurat, dikirim langsung oleh bridge)
+        // 2. x-forwarded-for / x-real-ip dari header HTTP
+        // 3. Fallback ke 127.0.0.1
+        let resolvedIp = bridgeIp || null;
+
+        if (!resolvedIp) {
+            let headerIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                           req.headers.get("x-real-ip") || 
+                           "127.0.0.1";
+            if (headerIp.includes("::ffff:")) headerIp = headerIp.replace("::ffff:", "");
+            if (headerIp !== "127.0.0.1" && headerIp !== "::1") {
+                resolvedIp = headerIp;
+            }
         }
 
+        console.log(`[IoT API] deviceCode: ${deviceCode}, bridgeIp: ${bridgeIp || 'N/A'}, resolvedIp: ${resolvedIp || 'none'}`);
+
         // 1. Ambil atau buat device secara otomatis (Auto-Registration)
+        // Hanya update lastKnownIp jika kita punya IP yang valid
         const device = await prisma.device.upsert({
             where: { deviceCode },
-            update: { lastPingAt: new Date() },
+            update: { 
+                lastPingAt: new Date(),
+                ...(resolvedIp ? { lastKnownIp: resolvedIp } : {})
+            },
             create: {
                 deviceCode,
-                name: deviceCode, // Default name set to deviceCode
+                name: deviceCode,
                 location: "Lokasi belum ditentukan",
                 isActive: true,
+                ...(resolvedIp ? { lastKnownIp: resolvedIp } : {}),
                 lastPingAt: new Date(),
             },
         });
@@ -63,9 +83,14 @@ export async function POST(req: NextRequest) {
         }
 
         // Validasi payload lengkap jika tipe adalah 'event'
-        if (!wasteType || organicLevel === undefined || inorganicLevel === undefined) {
-            return NextResponse.json({ success: false, error: "Invalid payload for event type" }, { status: 400 });
+        if (!wasteType) {
+            console.error("❌ [IoT API] Missing wasteType in payload:", payload);
+            return NextResponse.json({ success: false, error: "Invalid payload: wasteType missing" }, { status: 400 });
         }
+
+        // Definisikan level dengan default 0 jika tidak dikirim dari hardware (Backward Compatibility)
+        const safeOrganicLevel = organicLevel ?? 0;
+        const safeInorganicLevel = inorganicLevel ?? 0;
 
         // 2. Save waste event
         const wasteEvent = await prisma.wasteEvent.create({
@@ -80,8 +105,8 @@ export async function POST(req: NextRequest) {
         await prisma.capacityLog.create({
             data: {
                 deviceId: device.id,
-                organicLevel: Math.min(100, Math.max(0, organicLevel)),
-                inorganicLevel: Math.min(100, Math.max(0, inorganicLevel)),
+                organicLevel: Math.min(100, Math.max(0, safeOrganicLevel)),
+                inorganicLevel: Math.min(100, Math.max(0, safeInorganicLevel)),
             },
         });
 
@@ -94,46 +119,56 @@ export async function POST(req: NextRequest) {
         let capacityValue: number | undefined;
 
         // Check organic
-        if (organicLevel >= ALERT_THRESHOLD) {
+        if (safeOrganicLevel >= ALERT_THRESHOLD) {
             const existingUnread = await prisma.notification.findFirst({
                 where: { deviceId: device.id, wadahType: "ORGANIC", isRead: false },
             });
+            
+            hasAlert = true;
+            alertWadah = "ORGANIC";
+            capacityValue = safeOrganicLevel;
+
             if (!existingUnread) {
                 const newNotif = await prisma.notification.create({
                     data: {
                         deviceId: device.id,
                         wadahType: "ORGANIC",
-                        capacityValue: organicLevel,
+                        capacityValue: safeOrganicLevel,
                         type: "CAPACITY_FULL",
                     },
                 });
-                hasAlert = true;
-                alertWadah = "ORGANIC";
                 notificationId = newNotif.id;
                 notificationCreatedAt = newNotif.createdAt.toISOString();
-                capacityValue = organicLevel;
+            } else {
+                notificationId = existingUnread.id;
+                notificationCreatedAt = existingUnread.createdAt.toISOString();
             }
         }
 
         // Check inorganic
-        if (inorganicLevel >= ALERT_THRESHOLD) {
+        if (safeInorganicLevel >= ALERT_THRESHOLD) {
             const existingUnread = await prisma.notification.findFirst({
                 where: { deviceId: device.id, wadahType: "INORGANIC", isRead: false },
             });
+
+            hasAlert = true;
+            alertWadah = "INORGANIC";
+            capacityValue = safeInorganicLevel;
+
             if (!existingUnread) {
                 const newNotif = await prisma.notification.create({
                     data: {
                         deviceId: device.id,
                         wadahType: "INORGANIC",
-                        capacityValue: inorganicLevel,
+                        capacityValue: safeInorganicLevel,
                         type: "CAPACITY_FULL",
                     },
                 });
-                hasAlert = true;
-                alertWadah = "INORGANIC";
                 notificationId = newNotif.id;
                 notificationCreatedAt = newNotif.createdAt.toISOString();
-                capacityValue = inorganicLevel;
+            } else {
+                notificationId = existingUnread.id;
+                notificationCreatedAt = existingUnread.createdAt.toISOString();
             }
         }
 
@@ -143,8 +178,8 @@ export async function POST(req: NextRequest) {
             deviceCode: device.deviceCode,
             deviceName: device.name,
             type: "event",
-            organicLevel,
-            inorganicLevel,
+            organicLevel: safeOrganicLevel,
+            inorganicLevel: safeInorganicLevel,
             wasteType,
             moistureValue,
             hasAlert,

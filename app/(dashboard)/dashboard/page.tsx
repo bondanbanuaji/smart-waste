@@ -10,8 +10,9 @@ import { WasteBarChart } from "@/components/dashboard/WasteBarChart";
 import { RecentEventTable } from "@/components/dashboard/RecentEventTable";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { Activity, Leaf, Recycle, CalendarDays } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { Trash2, AlertCircle, Activity, Leaf, Recycle, CalendarDays } from "lucide-react";
 
 interface AlertItem {
     id: string;
@@ -26,6 +27,7 @@ export default function DashboardPage() {
     const [recentEvents, setRecentEvents] = useState<WasteEventItem[]>([]);
     const [alerts, setAlerts] = useState<AlertItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [audioEnabled, setAudioEnabled] = useState(false);
 
     const firstName = session?.user?.name?.split(' ')[0] || "User";
     const { speak } = useTTS();
@@ -71,17 +73,23 @@ export default function DashboardPage() {
 
         // 🔊 Text-to-Speech: Umumkan jenis sampah yang terdeteksi
         if (!isPing && update.wasteType) {
-            const jenis = update.wasteType === "ORGANIC" ? "organik" : "anorganik";
-            // Transform nama device agar dibaca natural (bukan dieja per huruf)
-            const rawName = update.deviceName || update.deviceCode;
-            let spokenName = rawName.toLowerCase().replace(/[-_]/g, " ");
+            const label = update.wasteType === "ORGANIC" ? "Organik" : "Anorganik";
+            const speechType = update.wasteType === "ORGANIC" ? "organik" : "anorganik";
             
-            // Fix khusus untuk Arduino agar tidak dieja "A-R-D"
-            if (spokenName.includes("arduino") || spokenName.includes("ard")) {
-                spokenName = spokenName.replace(/arduino|ard/g, "ardu ino");
+            // 🍞 Toast Notification
+            toast.success(`Sampah ${label} Terdeteksi!`, {
+                description: `${update.deviceName || "Device"} baru saja menerima sampah.`,
+                icon: <Trash2 className="w-4 h-4 text-green-500" />,
+            });
+
+            if (audioEnabled) {
+                const rawName = update.deviceName || update.deviceCode;
+                let spokenName = rawName.toLowerCase().replace(/[-_]/g, " ");
+                if (spokenName.includes("arduino")) {
+                    spokenName = spokenName.replace(/arduino/g, "ardu ino");
+                }
+                speak(`Sampah ${speechType} terdeteksi pada ${spokenName}`);
             }
-            
-            speak(`Sampah ${jenis} terdeteksi pada ${spokenName}`);
         }
 
         // Optimistic UI updates based on SSE
@@ -150,6 +158,14 @@ export default function DashboardPage() {
 
         if (update.hasAlert) {
             fetchAlerts(); // Re-fetch untuk sinkronisasi notifikasi
+            
+            // 🍞 Toast Alert
+            toast.error(`Kapasitas Penuh!`, {
+                description: `${update.deviceName || "Device"} (${update.alertWadah}) sudah mencapai batas.`,
+                icon: <AlertCircle className="w-4 h-4" />,
+                duration: 5000,
+            });
+
             // Increment unread notification count
             setData(prev => prev ? { ...prev, unreadNotificationCount: prev.unreadNotificationCount + 1 } : prev);
         }
@@ -181,7 +197,16 @@ export default function DashboardPage() {
     const chartData = data?.stats.weeklyChartData || [];
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+        <div 
+            className="space-y-6 animate-in fade-in duration-500 pb-12"
+            onClick={() => {
+                if (!audioEnabled) {
+                    setAudioEnabled(true);
+                    // Test sound on first click to acknowledge user interaction
+                    speak("Sistem suara diaktifkan");
+                }
+            }}
+        >
             <div className="flex flex-col gap-1 mb-6">
                 <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
                     Halo, {firstName}!

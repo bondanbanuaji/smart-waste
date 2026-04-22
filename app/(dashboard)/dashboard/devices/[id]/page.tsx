@@ -15,6 +15,10 @@ interface Device {
     location: string;
     isActive: boolean;
     lastPingAt: string | null;
+    capacity?: {
+        organic: number;
+        inorganic: number;
+    }
 }
 
 export default function DeviceManagePage() {
@@ -65,7 +69,11 @@ export default function DeviceManagePage() {
                 return {
                     ...prev,
                     name: update.deviceName || prev.name,
-                    lastPingAt: update.lastPingAt || new Date().toISOString()
+                    lastPingAt: update.lastPingAt || new Date().toISOString(),
+                    capacity: update.organicLevel !== undefined ? {
+                        organic: update.organicLevel,
+                        inorganic: update.inorganicLevel || 0
+                    } : prev.capacity
                 };
             }
             return prev;
@@ -178,6 +186,43 @@ export default function DeviceManagePage() {
                                 </dd>
                             </div>
                         </dl>
+                        
+                        {/* Live Capacity Indicators */}
+                        <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 space-y-5">
+                            <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Live Capacity Monitor</h4>
+                            
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                        Organik (Wet)
+                                    </span>
+                                    <span className="font-bold text-slate-900 dark:text-slate-100">{device.capacity?.organic || 0}%</span>
+                                </div>
+                                <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-emerald-500 transition-all duration-1000 ease-out" 
+                                        style={{ width: `${device.capacity?.organic || 0}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                                        Anorganik (Dry)
+                                    </span>
+                                    <span className="font-bold text-slate-900 dark:text-slate-100">{device.capacity?.inorganic || 0}%</span>
+                                </div>
+                                <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-amber-500 transition-all duration-1000 ease-out" 
+                                        style={{ width: `${device.capacity?.inorganic || 0}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

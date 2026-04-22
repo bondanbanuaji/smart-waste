@@ -1,84 +1,126 @@
 #include <Servo.h>
 #include <ArduinoJson.h>
 
-/*
- * ==========================================
- * KONFIGURASI PIN (ARDUINO UNO)
- * ==========================================
- */
-
-// 1. Sensor Ultrasonic DETEKSI DEPAN
+// PIN
 const int trigPin = 9;
 const int echoPin = 10;
-
-// 2. Sensor Soil Moisture
 const int soilPin = A0; 
-
-// 3. Servo Motor
 const int servoPin = 6;
 
-// 4. Konfigurasi Sistem
-int thresholdBasah = 500;
-const char* deviceCode = "ARDUINO-01"; // Identitas alat di dashboard
+// SISTEM BARU (SIMPLE & TEGAS)
+int thresholdBasah = 150;          // 🔥 batas utama
+int thresholdDeteksiObjek = 80;    // trigger awal
+int thresholdDelta = 20;           // perubahan minimal
 
-/* 
- * ==========================================
- * GLOBAL OBJECTS & VARIABLES
- * ==========================================
- */
+const char* deviceCode = "ARDUINO-01";
+
 Servo myServo;
-bool objectDetected = false;
+
+bool waitingSoilTrigger = false;
 bool isManualMode = false; // Flag mode pintu dikontrol web
+
+unsigned long triggerTime = 0;
+int baseSoil = 0;
 
 // Variabel Simulasi Kapasitas
 int simOrganic = 0;
 int simInorganic = 0;
 
+// POSISI
+int posStandby   = 90;
+int posOrganic   = 40;
+int posInorganic = 140;
+
+float currentPos = 90;
+
+/*
+ * BACA SOIL LEBIH STABIL
+ */
+int readSoilSmooth() {
+  int total = 0;
+  for (int i = 0; i < 5; i++) {
+    total += analogRead(soilPin);
+    delay(3);
+  }
+  return total / 5;
+}
+
+/*
+ * SETUP
+ */
 void setup() {
-  // Gunakan 9600 agar stabil di Arduino Uno
-  Serial.begin(9600); 
+  Serial.begin(9600);
 
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
 
-  myServo.attach(servoPin);
-  myServo.write(90); // Posisi Standby
+  myServo.attach(servoPin, 500, 2400);
+  myServo.write(posStandby);
+  delay(300);
+  myServo.detach();
 
-  Serial.println("\n=======================================");
-  Serial.println(" SMART TRASH BIN - ARDUINO UNO READY ");
-  Serial.println("=======================================");
-  Serial.print("Threshold Basah = "); Serial.println(thresholdBasah);
-  Serial.println("Menunggu sampah...");
-  Serial.println("");
+  Serial.println("=== SMART BIN READY (SIMPLE MODE) ===");
 }
 
+/*
+ * GERAK HALUS
+ */
+void smoothMove(int targetPos) {
+  myServo.attach(servoPin, 500, 2400);
+
+  float pos = currentPos;
+
+  while (abs(pos - targetPos) > 0.5) {
+    float speed = (targetPos - pos) * 0.12;
+
+    if (speed > 3) speed = 3;
+    if (speed < -3) speed = -3;
+
+    pos += speed;
+    myServo.write((int)pos);
+    delay(20);
+  }
+
+  myServo.write(targetPos);
+  currentPos = targetPos;
+
+  delay(200);
+  myServo.detach();
+}
+
+/*
+ * LOOP
+ */
 void loop() {
-  // --- CEK PERINTAH KONTROL WEBSITE ---
+  // ================= 0. CEK PERINTAH WEBSITE =================
   if (Serial.available() > 0) {
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
+    
     if (cmd == "CMD:OPEN_ORGANIC") {
       isManualMode = true;
-      myServo.write(0);
-      Serial.println("[INFO] OVERRIDE: Pintu Sampah Basah (Organik) DIBUKA");
+      waitingSoilTrigger = false;
+      Serial.println("[INFO] OVERRIDE: Pintu Organik DIBUKA");
+      smoothMove(posOrganic);
     } else if (cmd == "CMD:OPEN_INORGANIC") {
       isManualMode = true;
-      myServo.write(180);
-      Serial.println("[INFO] OVERRIDE: Pintu Sampah Kering (Anorganik) DIBUKA");
+      waitingSoilTrigger = false;
+      Serial.println("[INFO] OVERRIDE: Pintu Anorganik DIBUKA");
+      smoothMove(posInorganic);
     } else if (cmd == "CMD:CLOSE") {
       isManualMode = false;
-      myServo.write(90);
       Serial.println("[INFO] AUTO MODE: Pintu DITUTUP");
+      smoothMove(posStandby);
     }
   }
 
-  // Bypass deteksi otomatis sensor jika website sedang membuka pintu (Admin control)
+  // Jika sedang mode manual, jangan baca sensor (bypass)
   if (isManualMode) {
-    delay(200);
+    delay(100);
     return;
   }
 
-  // --- 1. BACA ULTRASONIK (DETEKSI) ---
+  // ================= ULTRASONIC =================
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
@@ -88,86 +130,97 @@ void loop() {
   long duration = pulseIn(echoPin, HIGH);
   int distance = duration * 0.034 / 2;
 
-  // --- 2. LOGIKA DETEKSI JALAN ---
-  if (distance > 1 && distance < 6 && objectDetected == false) {
-    objectDetected = true;
+  Serial.print("[ULTRA] Distance: ");
+  Serial.println(distance);
 
-    Serial.println("\n[!] OBJEK TERDETEKSI");
-    Serial.println("Menstabilkan sensor...");
-    delay(1500);
+  // DETEKSI OBJEK MASUK
+  if (distance > 1 && distance < 6 && !waitingSoilTrigger) {
+    Serial.println(">> OBJEK MASUK");
 
-    // BACA SENSOR BEBERAPA KALI (AVERAGING)
-    long total = 0;
-    int jumlahBaca = 10;
-    Serial.println("Mulai pembacaan sensor soil (Sampling)...");
+    waitingSoilTrigger = true;
+    triggerTime = millis();
 
-    for (int i = 0; i < jumlahBaca; i++) {
-      int val = analogRead(soilPin);
-      total += val;
-      Serial.print("Sample "); Serial.print(i + 1);
-      Serial.print(" : "); Serial.println(val);
-      delay(200);
-    }
+    baseSoil = readSoilSmooth();
 
-    int rataSoil = total / jumlahBaca;
-    Serial.print("Rata-rata Soil = "); Serial.println(rataSoil);
-
-    // KLASIFIKASI & SERVO MOVE
-    String wasteType;
-    if (rataSoil > thresholdBasah) {
-      wasteType = "ORGANIC";
-      Serial.println(">>> SAMPAH BASAH TERDETEKSI <<<");
-      simOrganic = min(100, simOrganic + 5); // Simulasi: Naik 5%
-      myServo.write(0);
-      delay(2500);
-    } else {
-      wasteType = "INORGANIC";
-      Serial.println(">>> SAMPAH KERING TERDETEKSI <<<");
-      simInorganic = min(100, simInorganic + 5); // Simulasi: Naik 5%
-      myServo.write(180);
-      delay(2500);
-    }
-
-    // KIRIM DATA KE WEBSITE LEWAT SERIAL JSON
-    // Data ini akan dibaca oleh script bridge di laptop
-    sendJsonData(wasteType, rataSoil);
-
-    // KEMBALI KE STANDBY
-    Serial.println("Mengembalikan servo ke posisi standby...");
-    myServo.write(90);
-    delay(1500);
-
-    Serial.println("=======================================");
-    Serial.println("Sistem siap menerima sampah berikutnya");
-    Serial.println("=======================================");
-    
-    objectDetected = false;
+    Serial.print(">> BASE SOIL: ");
+    Serial.println(baseSoil);
   }
 
-  delay(300); 
+  // ================= SOIL MONITOR =================
+  if (waitingSoilTrigger) {
+
+    int soilNow = readSoilSmooth();
+    int delta = abs(soilNow - baseSoil);
+
+    Serial.print("[SOIL] ");
+    Serial.print(soilNow);
+    Serial.print(" | DELTA: ");
+    Serial.println(delta);
+
+    // 🔥 TRIGGER (sensitif)
+    if (soilNow > thresholdDeteksiObjek || delta > thresholdDelta) {
+
+      Serial.println(">> SOIL TERPICU");
+
+      waitingSoilTrigger = false;
+
+      // SAMPLING FINAL
+      long total = 0;
+      for (int i = 0; i < 10; i++) {
+        total += readSoilSmooth();
+        delay(20);
+      }
+
+      int rataSoil = total / 10;
+
+      Serial.print(">> RATA SOIL: ");
+      Serial.println(rataSoil);
+
+      String wasteType;
+
+      // 🔥 LOGIKA BARU (SIMPLE)
+      if (rataSoil >= thresholdBasah) {
+        wasteType = "ORGANIC";
+        Serial.println(">> HASIL: BASAH / ORGANIC");
+        simOrganic = min(100, simOrganic + 5); 
+        smoothMove(posOrganic);
+      } else {
+        wasteType = "INORGANIC";
+        Serial.println(">> HASIL: KERING / INORGANIC");
+        simInorganic = min(100, simInorganic + 5);
+        smoothMove(posInorganic);
+      }
+
+      delay(1000);
+      smoothMove(posStandby);
+
+      sendJsonData(wasteType, rataSoil);
+    }
+
+    // TIMEOUT
+    if (millis() - triggerTime > 3000) {
+      Serial.println(">> TIMEOUT (SOIL TIDAK AKTIF)");
+      waitingSoilTrigger = false;
+    }
+  }
+
+  delay(80);
 }
 
 /*
- * ==========================================
- * HELPER FUNCTIONS
- * ==========================================
- */
-
-/**
- * Mengirim data dalam format JSON melalui Serial USB.
- * Format ini yang akan dibaca oleh Node.js Bridge.
+ * JSON
  */
 void sendJsonData(String type, int moisture) {
   StaticJsonDocument<128> doc;
+
   doc["deviceCode"] = deviceCode;
   doc["wasteType"] = type;
   doc["moistureValue"] = moisture;
   
-  // Data kapasitas (menggunakan variabel simulasi)
+  // Gunakan variabel simulasi agar dashboard terlihat akurat/bergerak
   doc["organicLevel"] = simOrganic;
   doc["inorganicLevel"] = simInorganic;
 
-  // Kirim JSON ke Serial dengan marker khusus agar mudah dibaca bridge
   Serial.print("DATA_START:");
   serializeJson(doc, Serial);
   Serial.println(":DATA_END");

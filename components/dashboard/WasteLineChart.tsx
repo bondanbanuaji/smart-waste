@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -27,6 +28,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function WasteLineChart({ data, deviceName }: WasteLineChartProps) {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+
     return (
         <Card className="col-span-1 border-none shadow-sm bg-card text-card-foreground">
             <CardHeader>
@@ -39,29 +43,31 @@ export function WasteLineChart({ data, deviceName }: WasteLineChartProps) {
                             Belum ada data
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
-                                <XAxis
-                                    dataKey="time"
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fontSize: 12 }}
-                                    className="fill-slate-400 dark:fill-slate-600"
-                                    dy={10}
-                                />
-                                <YAxis
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fontSize: 12 }}
-                                    className="fill-slate-400 dark:fill-slate-600"
-                                    domain={[0, 100]}
-                                />
-                                <Tooltip content={<CustomTooltip />} />
-                                <Line name="Organik (Wet)" type="monotone" dataKey="organicLevel" stroke="#22c55e" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
-                                <Line name="Anorganik (Dry)" type="monotone" dataKey="inorganicLevel" stroke="#94a3b8" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
+                        mounted && (
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
+                                    <XAxis
+                                        dataKey="time"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fontSize: 12 }}
+                                        className="fill-slate-400 dark:fill-slate-600"
+                                        dy={10}
+                                    />
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fontSize: 12 }}
+                                        className="fill-slate-400 dark:fill-slate-600"
+                                        domain={[0, 100]}
+                                    />
+                                    <Tooltip content={<CustomTooltip />} />
+                                    <Line name="Organik (Wet)" type="monotone" dataKey="organicLevel" stroke="#22c55e" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
+                                    <Line name="Anorganik (Dry)" type="monotone" dataKey="inorganicLevel" stroke="#94a3b8" strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )
                     )}
                 </div>
             </CardContent>

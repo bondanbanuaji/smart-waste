@@ -86,4 +86,5 @@ export interface IoTPayload {
     moistureValue: number;
     organicLevel: number;
     inorganicLevel: number;
+    bridgeIp?: string;   // IP lokal bridge, dikirim eksplisit oleh serial_bridge.js
 }

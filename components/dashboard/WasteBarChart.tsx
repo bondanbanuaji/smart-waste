@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -28,6 +29,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function WasteBarChart({ data }: WasteBarChartProps) {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+
     return (
         <Card className="col-span-1 lg:col-span-2 shadow-sm border-none bg-card text-card-foreground">
             <CardHeader>
@@ -40,32 +44,34 @@ export function WasteBarChart({ data }: WasteBarChartProps) {
                             Belum ada data
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
-                                <XAxis
-                                    dataKey="label"
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fontSize: 12 }}
-                                    className="fill-slate-400 dark:fill-slate-600"
-                                    dy={10}
-                                />
-                                <YAxis
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fontSize: 12 }}
-                                    className="fill-slate-400 dark:fill-slate-600"
-                                />
-                                <Tooltip
-                                    cursor={{ fill: 'currentColor', className: 'text-slate-100/50 dark:text-slate-800/50' }}
-                                    content={<CustomTooltip />}
-                                />
-                                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }} />
-                                <Bar name="Organik (Wet)" dataKey="organic" fill="#22c55e" radius={[4, 4, 0, 0]} barSize={32} />
-                                <Bar name="Anorganik (Dry)" dataKey="inorganic" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={32} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        mounted && (
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
+                                    <XAxis
+                                        dataKey="label"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fontSize: 12 }}
+                                        className="fill-slate-400 dark:fill-slate-600"
+                                        dy={10}
+                                    />
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fontSize: 12 }}
+                                        className="fill-slate-400 dark:fill-slate-600"
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: 'currentColor', className: 'text-slate-100/50 dark:text-slate-800/50' }}
+                                        content={<CustomTooltip />}
+                                    />
+                                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }} />
+                                    <Bar name="Organik (Wet)" dataKey="organic" fill="#22c55e" radius={[4, 4, 0, 0]} barSize={32} />
+                                    <Bar name="Anorganik (Dry)" dataKey="inorganic" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={32} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        )
                     )}
                 </div>
             </CardContent>

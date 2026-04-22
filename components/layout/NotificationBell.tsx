@@ -8,8 +8,9 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { NotificationItem } from "@/types";
+import { NotificationItem, SSEDataUpdate } from "@/types";
 import { formatRelativeTime } from "@/lib/utils";
+import { useSSE } from "@/hooks/useSSE";
 
 
 export function NotificationBell() {
@@ -31,36 +32,29 @@ export function NotificationBell() {
 
     useEffect(() => {
         fetchNotifications();
-        // In a real app we'd also listen to SSE events here to increment the badge
-        const eventSource = new EventSource("/api/sse");
-        eventSource.onmessage = () => {
-            // The custom route sends 'event: data-update' which is handled via addEventListener
-        };
-        eventSource.addEventListener("data-update", (e: MessageEvent) => {
-            const payload = JSON.parse(e.data);
-            if (payload.hasAlert) {
-                // Realtime Sync: Buat item notifikasi baru dari payload
-                const newNotification: NotificationItem = {
-                    id: payload.notificationId || Math.random().toString(),
-                    deviceName: payload.deviceName || "Device",
-                    wadahType: payload.alertWadah || "ORGANIC",
-                    capacityValue: payload.capacityValue || 90,
-                    isRead: false,
-                    createdAt: payload.notificationCreatedAt || new Date().toISOString(),
-                };
-
-                // Prepend ke list dan update count secara instan
-                setNotifications(prev => {
-                    // Cek apakah ID sudah ada untuk menghindari duplikasi
-                    if (prev.some(n => n.id === newNotification.id)) return prev;
-                    return [newNotification, ...prev];
-                });
-                setUnreadCount(prev => prev + 1);
-            }
-        });
-
-        return () => eventSource.close();
     }, []);
+
+    useSSE((payload: SSEDataUpdate) => {
+        if (payload.hasAlert) {
+            // Realtime Sync: Buat item notifikasi baru dari payload
+            const newNotification: NotificationItem = {
+                id: payload.notificationId || Math.random().toString(),
+                deviceName: payload.deviceName || "Device",
+                wadahType: payload.alertWadah || "ORGANIC",
+                capacityValue: payload.capacityValue || 90,
+                isRead: false,
+                createdAt: payload.notificationCreatedAt || new Date().toISOString(),
+            };
+
+            // Prepend ke list dan update count secara instan
+            setNotifications(prev => {
+                // Cek apakah ID sudah ada untuk menghindari duplikasi
+                if (prev.some(n => n.id === newNotification.id)) return prev;
+                return [newNotification, ...prev];
+            });
+            setUnreadCount(prev => prev + 1);
+        }
+    });
 
     const markAllAsRead = async () => {
         try {

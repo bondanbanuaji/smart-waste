@@ -25,19 +25,25 @@ export async function POST(
             return NextResponse.json({ error: "Device not found in database" }, { status: 404 });
         }
 
-        // 2. Cari IP Bridge dari hasil scan/discovery network UDP
-        const activeDevices = discovery.getNearbyDevices();
-        const bridgeDevice = activeDevices.find(d => d.deviceCode === device.deviceCode);
-
-        // Fallback ke status online terakhir di DB tapi idealnya butuh local IP yang presisi
-        if (!bridgeDevice) {
+        // 2. Tentukan IP Bridge
+        // Prioritas 1: Ambil dari database (Last Known IP yang baru saja kita simpan)
+        // Prioritas 2: Ambil dari hasil scan network UDP (Discovery)
+        let targetIp = (device as any).lastKnownIp;
+        
+        if (!targetIp) {
+            const activeDevices = discovery.getNearbyDevices();
+            const bridgeDevice = activeDevices.find(d => d.deviceCode === device.deviceCode);
+            if (bridgeDevice) targetIp = bridgeDevice.ip;
+        }
+        
+        if (!targetIp) {
              return NextResponse.json({ 
-                 error: "Device is currently offline or not detected on local network. Ensure serial_bridge.js is running." 
+                 error: "Alamat IP device belum terdeteksi. Pastikan serial_bridge.js sudah mengirim data minimal satu kali." 
              }, { status: 503 });
         }
 
         // 3. Kirim HTTP POST ke lokal bridge
-        const cmdUrl = `http://${bridgeDevice.ip}:8890/command`;
+        const cmdUrl = `http://${targetIp}:8890/command`;
         
         console.log(`[API] Forwarding manual command ${command} to ${cmdUrl}`);
         
