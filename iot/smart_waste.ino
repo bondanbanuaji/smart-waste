@@ -28,6 +28,7 @@ const char* deviceCode = "ARDUINO-01"; // Identitas alat di dashboard
  */
 Servo myServo;
 bool objectDetected = false;
+bool isManualMode = false; // Flag mode pintu dikontrol web
 
 // Variabel Simulasi Kapasitas
 int simOrganic = 0;
@@ -52,6 +53,31 @@ void setup() {
 }
 
 void loop() {
+  // --- CEK PERINTAH KONTROL WEBSITE ---
+  if (Serial.available() > 0) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    if (cmd == "CMD:OPEN_ORGANIC") {
+      isManualMode = true;
+      myServo.write(0);
+      Serial.println("[INFO] OVERRIDE: Pintu Sampah Basah (Organik) DIBUKA");
+    } else if (cmd == "CMD:OPEN_INORGANIC") {
+      isManualMode = true;
+      myServo.write(180);
+      Serial.println("[INFO] OVERRIDE: Pintu Sampah Kering (Anorganik) DIBUKA");
+    } else if (cmd == "CMD:CLOSE") {
+      isManualMode = false;
+      myServo.write(90);
+      Serial.println("[INFO] AUTO MODE: Pintu DITUTUP");
+    }
+  }
+
+  // Bypass deteksi otomatis sensor jika website sedang membuka pintu (Admin control)
+  if (isManualMode) {
+    delay(200);
+    return;
+  }
+
   // --- 1. BACA ULTRASONIK (DETEKSI) ---
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);

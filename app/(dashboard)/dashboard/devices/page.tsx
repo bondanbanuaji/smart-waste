@@ -15,7 +15,8 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
-import { Plus, Wifi, WifiOff, Cpu, Trash2, Search, Radar, CheckCircle2, Pencil, AlertTriangle } from "lucide-react";
+import { Plus, Wifi, WifiOff, Cpu, Trash2, Search, Radar, CheckCircle2, Pencil, AlertTriangle, Settings2 } from "lucide-react";
+import Link from "next/link";
 import { useSSE } from "@/hooks/useSSE";
 import { useTTS } from "@/hooks/useTTS";
 import { SSEDataUpdate } from "@/types";
@@ -298,7 +299,7 @@ export default function DevicesPage() {
                         </DialogContent>
                     </Dialog>
 
-                    <Dialog open={isDialogOpen} onOpenChange={(open) => !open && closeDialog()}>
+                    <Dialog open={isDialogOpen} onOpenChange={(open: boolean) => !open && closeDialog()}>
                         <DialogTrigger asChild>
                             <Button className="bg-green-600 hover:bg-green-700 text-white shadow-md" onClick={openCreateDialog}>
                                 <Plus className="w-4 h-4 mr-2" />
@@ -369,7 +370,7 @@ export default function DevicesPage() {
                 </Dialog>
 
                 {/* Dialog Konfirmasi Hapus */}
-                <Dialog open={!!isDeleting} onOpenChange={(open) => !open && setIsDeleting(null)}>
+                <Dialog open={!!isDeleting} onOpenChange={(open: boolean) => !open && setIsDeleting(null)}>
                     <DialogContent className="sm:max-w-[400px]">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -415,6 +416,14 @@ export default function DevicesPage() {
                                             <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm tracking-tight">{device.deviceCode}</h3>
                                         </div>
                                         <div className="flex items-center gap-1.5">
+                                            <Link href={`/dashboard/devices/${device.id}`}>
+                                                <button 
+                                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg transition-colors"
+                                                    title="Kelola & Manual Override Device"
+                                                >
+                                                    <Settings2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            </Link>
                                             <button 
                                                 onClick={() => openEditDialog(device)}
                                                 className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors"

@@ -8,11 +8,14 @@ const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 const axios = require('axios');
 const dgram = require('dgram');
+const http = require('http'); // Tambahan untuk HTTP command server
 
 // --- KONFIGURASI AWAL ---
 const BAUD_RATE = 9600;
 const SERVER_BROADCAST_PORT = 8888; // Port untuk mendengarkan server
 const DISCOVERY_PORT = 8889;        // Port untuk memberi tahu server kita online
+const LOCAL_CMD_PORT = 8890;        // Port HTTP internal untuk mendengarkan command dashboard
+
 const BROADCAST_ADDR = '192.168.1.255'; // SESUAIKAN: Alamat broadcast subnet Anda (biasanya diakhiri .255)
 const DEVICE_CODE = 'ARDUINO-01';
 
@@ -120,6 +123,49 @@ async function startBridge() {
         // Jalankan Heartbeat
         startDiscoveryHeartbeat();
         startStatusHeartbeat();
+
+        // 3. START HTTP CMD SERVER UNTUK MENERIMA PERINTAH MANUIAL OVERRIDE DARI WEBSITE
+        const cmdServer = http.createServer((req, res) => {
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+            if (req.method === 'OPTIONS') {
+                res.writeHead(204);
+                return res.end();
+            }
+
+            if (req.method === 'POST' && req.url === '/command') {
+                let body = '';
+                req.on('data', chunk => body += chunk.toString());
+                req.on('end', () => {
+                    try {
+                        const data = JSON.parse(body);
+                        if (data.command) {
+                            console.log(`\n=======================================`);
+                            console.log(`[Bridge] Menerima Command: ${data.command}`);
+                            console.log(`=======================================`);
+                            port.write(`CMD:${data.command}\n`);
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ success: true }));
+                        } else {
+                            res.writeHead(400);
+                            res.end(JSON.stringify({ success: false, error: 'Command missing' }));
+                        }
+                    } catch (e) {
+                        res.writeHead(400);
+                        res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }));
+                    }
+                });
+            } else {
+                res.writeHead(404);
+                res.end();
+            }
+        });
+        
+        cmdServer.listen(LOCAL_CMD_PORT, '0.0.0.0', () => {
+            console.log(`🔌 Bridge Local Command API berjalan pada port ${LOCAL_CMD_PORT}`);
+        });
 
         port.on('open', () => {
             console.log('✅ Serial Port Terhubung: ' + portPath);
