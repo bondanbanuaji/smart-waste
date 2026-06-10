@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Leaf, Loader2 } from "lucide-react";
+import { Suspense } from "react";
 
-export default function LoginPage() {
+function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [email, setEmail] = useState("admin@smarttrash.com");
@@ -108,5 +109,17 @@ export default function LoginPage() {
                 </CardFooter>
             </form>
         </Card>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <Card className="w-full max-w-md p-8 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+            </Card>
+        }>
+            <LoginContent />
+        </Suspense>
     );
 }

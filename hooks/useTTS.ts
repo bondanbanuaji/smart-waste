@@ -1,82 +1,85 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 
-interface TTSOptions {
-    lang?: string;
-    rate?: number;
-    pitch?: number;
-}
+const STORAGE_KEY = "smartwaste_tts_muted";
 
 /**
- * Hook untuk Text-to-Speech menggunakan Web SpeechSynthesis API.
+ * Hook untuk Text-to-Speech menggunakan Google Translate TTS dengan fallback ke Web Speech API.
  */
-export function useTTS(options?: TTSOptions) {
-    const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
-    const lastSpokenRef = useRef<number>(0);
-    const { lang = "id-ID", rate = 1.0, pitch = 1.0 } = options || {};
+export function useTTS() {
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [isMuted, setIsMuted] = useState(true); // Default muted sampai client-side load
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    const loadVoices = useCallback(() => {
-        if (typeof window === "undefined" || !window.speechSynthesis) return;
-        const voices = speechSynthesis.getVoices();
-        if (voices.length === 0) return;
-
-        // Prioritas: Suara Indonesia perempuan
-        const idFemale = voices.find(
-            (v) => v.lang.startsWith("id") && (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("perempuan"))
-        );
-        const idAny = voices.find((v) => v.lang.startsWith("id"));
-        const anyFemale = voices.find(
-            (v) => v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("woman")
-        );
-
-        voiceRef.current = idFemale || idAny || anyFemale || voices[0] || null;
+    // Inisialisasi state mute dari localStorage
+    useEffect(() => {
+        const savedMute = localStorage.getItem(STORAGE_KEY);
+        if (savedMute !== null) {
+            setIsMuted(savedMute === "true");
+        } else {
+            // Default awal jika belum pernah diatur
+            setIsMuted(false);
+            localStorage.setItem(STORAGE_KEY, "false");
+        }
     }, []);
 
-    useEffect(() => {
+    const toggleMute = useCallback(() => {
+        setIsMuted((prev) => {
+            const newState = !prev;
+            localStorage.setItem(STORAGE_KEY, String(newState));
+            return newState;
+        });
+    }, []);
+
+    const speakViaWebSpeech = useCallback((text: string) => {
         if (typeof window === "undefined" || !window.speechSynthesis) return;
-
-        loadVoices();
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = loadVoices;
-        }
-
-        return () => {
-            if (speechSynthesis.onvoiceschanged !== undefined) {
-                speechSynthesis.onvoiceschanged = null;
-            }
-        };
-    }, [loadVoices]);
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "id-ID";
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+        
+        window.speechSynthesis.speak(utterance);
+    }, []);
 
     const speak = useCallback(
-        (text: string) => {
-            if (typeof window === "undefined" || !window.speechSynthesis) return;
+        async (text: string) => {
+            if (isMuted || isSpeaking) return;
 
-            // Jangan bicara jika jarak < 1 detik untuk menghindari suara tumpuk
-            const now = Date.now();
-            if (now - lastSpokenRef.current < 1000) return;
-            lastSpokenRef.current = now;
+            setIsSpeaking(true);
 
-            // Pastikan cancel dulu sebelum bicara baru
-            speechSynthesis.cancel();
+            try {
+                const encoded = encodeURIComponent(text);
+                const url = `https://translate.googleapis.com/translate_tts?ie=UTF-8&q=${encoded}&tl=id&client=gtx&ttsspeed=0.9`;
+                
+                if (audioRef.current) {
+                    audioRef.current.pause();
+                    audioRef.current = null;
+                }
 
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = lang;
-            utterance.rate = rate;
-            utterance.pitch = pitch;
-            utterance.volume = 1;
+                const audio = new Audio(url);
+                audioRef.current = audio;
 
-            if (voiceRef.current) {
-                utterance.voice = voiceRef.current;
+                audio.onended = () => {
+                    setIsSpeaking(false);
+                    audioRef.current = null;
+                };
+
+                audio.onerror = () => {
+                    console.warn("⚠️ [TTS] Google TTS gagal, mencoba fallback ke Web Speech API.");
+                    speakViaWebSpeech(text);
+                };
+
+                await audio.play();
+            } catch (error) {
+                console.warn("⚠️ [TTS] Error saat memutar audio:", error);
+                // Fallback terakhir
+                speakViaWebSpeech(text);
             }
-
-            // Patch untuk browser mobile: panggil speak dalam event loop terpisah
-            setTimeout(() => {
-                speechSynthesis.speak(utterance);
-            }, 50);
         },
-        [lang, rate, pitch]
+        [isMuted, isSpeaking, speakViaWebSpeech]
     );
 
-    return { speak };
+    return { speak, isSpeaking, isMuted, toggleMute };
 }

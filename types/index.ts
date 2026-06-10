@@ -66,7 +66,7 @@ export interface SSEDataUpdate {
     deviceId: string;
     deviceCode: string;
     deviceName?: string;      // Tambahkan nama alat
-    type?: "event" | "ping";
+    type?: "event" | "ping" | "cleanup";
     organicLevel?: number;
     inorganicLevel?: number;
     wasteType?: WasteType;

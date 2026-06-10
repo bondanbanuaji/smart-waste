@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSSE } from "@/hooks/useSSE";
 import { useTTS } from "@/hooks/useTTS";
+import { WASTE_ALERTS } from "@/lib/ttsMessages";
 import { DashboardData, SSEDataUpdate, WasteEventItem } from "@/types";
 import { CapacityCard } from "@/components/dashboard/CapacityCard";
 import { AlertBanner } from "@/components/dashboard/AlertBanner";
@@ -12,7 +13,7 @@ import { LoadingSkeleton } from "@/components/shared/LoadingSkeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Trash2, AlertCircle, Activity, Leaf, Recycle, CalendarDays } from "lucide-react";
+import { Trash2, AlertCircle, Activity, Leaf, Recycle, CalendarDays, Volume2, VolumeX } from "lucide-react";
 
 interface AlertItem {
     id: string;
@@ -27,10 +28,9 @@ export default function DashboardPage() {
     const [recentEvents, setRecentEvents] = useState<WasteEventItem[]>([]);
     const [alerts, setAlerts] = useState<AlertItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [audioEnabled, setAudioEnabled] = useState(false);
 
     const firstName = session?.user?.name?.split(' ')[0] || "User";
-    const { speak } = useTTS();
+    const { speak, isMuted, toggleMute } = useTTS();
 
     const fetchDashboard = async () => {
         try {
@@ -70,26 +70,34 @@ export default function DashboardPage() {
 
     useSSE((update: SSEDataUpdate) => {
         const isPing = update.type === "ping";
+        const isCleanup = update.type === "cleanup";
 
         // 🔊 Text-to-Speech: Umumkan jenis sampah yang terdeteksi
-        if (!isPing && update.wasteType) {
-            const label = update.wasteType === "ORGANIC" ? "Organik" : "Anorganik";
-            const speechType = update.wasteType === "ORGANIC" ? "organik" : "anorganik";
+        if (!isPing && !isCleanup && update.wasteType) {
+            const isOrganic = update.wasteType === "ORGANIC";
+            const label = isOrganic ? "Basah (Organik)" : "Kering (Anorganik)";
+            const alertKey = isOrganic ? "sampah_basah" : "sampah_kering";
             
             // 🍞 Toast Notification
             toast.success(`Sampah ${label} Terdeteksi!`, {
                 description: `${update.deviceName || "Device"} baru saja menerima sampah.`,
-                icon: <Trash2 className="w-4 h-4 text-green-500" />,
+                icon: <Trash2 className={`w-4 h-4 ${isOrganic ? 'text-emerald-500' : 'text-amber-500'}`} />,
             });
 
-            if (audioEnabled) {
-                const rawName = update.deviceName || update.deviceCode;
-                let spokenName = rawName.toLowerCase().replace(/[-_]/g, " ");
-                if (spokenName.includes("arduino")) {
-                    spokenName = spokenName.replace(/arduino/g, "ardu ino");
-                }
-                speak(`Sampah ${speechType} terdeteksi pada ${spokenName}`);
+            // Gunakan pesan dari WASTE_ALERTS
+            if (WASTE_ALERTS[alertKey]) {
+                speak(WASTE_ALERTS[alertKey]);
             }
+        }
+
+        // Handle Cleanup Notification
+        if (isCleanup) {
+            toast.info(`Wadah Dibersihkan!`, {
+                description: `Kapasitas ${update.deviceName || "Device"} telah direset ke 0%.`,
+                icon: <Recycle className="w-4 h-4 text-emerald-500" />,
+            });
+            fetchAlerts(); // Re-fetch alerts to clear the banner
+            speak(WASTE_ALERTS["normal"]);
         }
 
         // Optimistic UI updates based on SSE
@@ -99,17 +107,16 @@ export default function DashboardPage() {
                 ...prev,
                 stats: {
                     ...prev.stats,
-                    // Hanya tambah statistik jika ini adalah event sampah (bukan ping)
-                    totalEventToday: isPing ? prev.stats.totalEventToday : prev.stats.totalEventToday + 1,
+                    totalEventToday: (isPing || isCleanup) ? prev.stats.totalEventToday : prev.stats.totalEventToday + 1,
                     totalOrganicToday: prev.stats.totalOrganicToday + (update.wasteType === "ORGANIC" ? 1 : 0),
                     totalInorganicToday: prev.stats.totalInorganicToday + (update.wasteType === "INORGANIC" ? 1 : 0),
-                    totalEventThisWeek: isPing ? prev.stats.totalEventThisWeek : prev.stats.totalEventThisWeek + 1,
+                    totalEventThisWeek: (isPing || isCleanup) ? prev.stats.totalEventThisWeek : prev.stats.totalEventThisWeek + 1,
                 },
                 devices: prev.devices.map(d => {
                     if (d.id === update.deviceId || d.deviceCode === update.deviceCode) {
                         return {
                             ...d,
-                            name: update.deviceName || d.name, // Update nama secara realtime
+                            name: update.deviceName || d.name,
                             lastPingAt: update.lastPingAt || new Date().toISOString(),
                             latestCapacity: isPing ? d.latestCapacity : {
                                 organicLevel: update.organicLevel ?? d.latestCapacity?.organicLevel ?? 0,
@@ -120,13 +127,15 @@ export default function DashboardPage() {
                     }
                     return d;
                 }),
+                unreadNotificationCount: isCleanup 
+                    ? Math.max(0, prev.unreadNotificationCount - (prev.unreadNotificationCount > 0 ? 1 : 0))
+                    : prev.unreadNotificationCount
             };
         });
 
-        // Jika ada event sampah baru, tambahkan ke tabel Recent Events secara realtime
-        if (!isPing && update.wasteType) {
+        if (!isPing && !isCleanup && update.wasteType) {
             const newEvent: WasteEventItem = {
-                id: Math.random().toString(36).substring(7), // Temporary ID for UI
+                id: Math.random().toString(36).substring(7),
                 deviceCode: update.deviceCode,
                 deviceName: update.deviceName || "Device",
                 wasteType: update.wasteType,
@@ -135,7 +144,6 @@ export default function DashboardPage() {
             };
             setRecentEvents(prev => [newEvent, ...prev].slice(0, 5));
 
-            // SINKRONISASI GRAFIK MINGGUAN (Realtime Bar Chart)
             setData(prev => {
                 if (!prev) return prev;
                 const todayLabel = new Date().toLocaleDateString('id-ID', { weekday: 'short' });
@@ -157,16 +165,13 @@ export default function DashboardPage() {
         }
 
         if (update.hasAlert) {
-            fetchAlerts(); // Re-fetch untuk sinkronisasi notifikasi
-            
-            // 🍞 Toast Alert
+            fetchAlerts();
             toast.error(`Kapasitas Penuh!`, {
                 description: `${update.deviceName || "Device"} (${update.alertWadah}) sudah mencapai batas.`,
                 icon: <AlertCircle className="w-4 h-4" />,
                 duration: 5000,
             });
-
-            // Increment unread notification count
+            speak(WASTE_ALERTS["penuh"]);
             setData(prev => prev ? { ...prev, unreadNotificationCount: prev.unreadNotificationCount + 1 } : prev);
         }
     });
@@ -179,8 +184,6 @@ export default function DashboardPage() {
                 body: JSON.stringify({ ids: [id] }),
             });
             setAlerts(prev => prev.filter(a => a.id !== id));
-
-            // Update global unread count optimistic 
             setData(prev => {
                 if (!prev) return prev;
                 return { ...prev, unreadNotificationCount: Math.max(0, prev.unreadNotificationCount - 1) };
@@ -197,21 +200,14 @@ export default function DashboardPage() {
     const chartData = data?.stats.weeklyChartData || [];
 
     return (
-        <div 
-            className="space-y-6 animate-in fade-in duration-500 pb-12"
-            onClick={() => {
-                if (!audioEnabled) {
-                    setAudioEnabled(true);
-                    // Test sound on first click to acknowledge user interaction
-                    speak("Sistem suara diaktifkan");
-                }
-            }}
-        >
-            <div className="flex flex-col gap-1 mb-6">
-                <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-                    Halo, {firstName}!
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400">Berikut adalah status pembuangan sampah hari ini.</p>
+        <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+                        Halo, {firstName}!
+                    </h1>
+                    <p className="text-slate-500 dark:text-slate-400">Berikut adalah status pembuangan sampah hari ini.</p>
+                </div>
             </div>
 
             <AlertBanner
@@ -224,23 +220,22 @@ export default function DashboardPage() {
                 onDismiss={handleDismissAlert}
             />
 
-            {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard title="Total Event Hari Ini" value={data?.stats.totalEventToday || 0} icon={<Activity className="h-5 w-5 text-sky-600 dark:text-sky-300" />} gradient="from-sky-100 to-blue-200 dark:from-sky-900/40 dark:to-blue-900/40" textClass="text-sky-900 dark:text-sky-50" />
-                <StatCard title="Organik (Wet)" value={data?.stats.totalOrganicToday || 0} icon={<Leaf className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />} gradient="from-emerald-100 to-teal-200 dark:from-emerald-900/40 dark:to-teal-900/40" textClass="text-emerald-900 dark:text-emerald-50" />
-                <StatCard title="Anorganik (Dry)" value={data?.stats.totalInorganicToday || 0} icon={<Recycle className="h-5 w-5 text-amber-600 dark:text-amber-300" />} gradient="from-orange-100 to-amber-200 dark:from-orange-900/40 dark:to-amber-900/40" textClass="text-amber-900 dark:text-amber-50" />
+                <StatCard title="Sampah Basah" value={data?.stats.totalOrganicToday || 0} icon={<Leaf className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />} gradient="from-emerald-100 to-teal-200 dark:from-emerald-900/40 dark:to-teal-900/40" textClass="text-emerald-900 dark:text-emerald-50" />
+                <StatCard title="Sampah Kering" value={data?.stats.totalInorganicToday || 0} icon={<Recycle className="h-5 w-5 text-amber-600 dark:text-amber-300" />} gradient="from-orange-100 to-amber-200 dark:from-orange-900/40 dark:to-amber-900/40" textClass="text-amber-900 dark:text-amber-50" />
                 <StatCard title="Minggu Ini" value={data?.stats.totalEventThisWeek || 0} icon={<CalendarDays className="h-5 w-5 text-fuchsia-600 dark:text-fuchsia-300" />} gradient="from-fuchsia-100 to-pink-200 dark:from-fuchsia-900/40 dark:to-pink-900/40" textClass="text-fuchsia-900 dark:text-fuchsia-50" />
             </div>
 
-            {/* Capacity Cards (Living / Realtime) */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pt-2">
                 {data?.devices.map(device => {
                     const cap = device.latestCapacity || { organicLevel: 0, inorganicLevel: 0, recordedAt: "" };
-                    const isOnline = !!device.lastPingAt && (new Date().getTime() - new Date(device.lastPingAt).getTime() < 60000); // 1 min (lebih responsif)
+                    const isOnline = !!device.lastPingAt && (new Date().getTime() - new Date(device.lastPingAt).getTime() < 60000);
 
                     return (
                         <CapacityCard
                             key={device.id}
+                            deviceId={device.id}
                             deviceName={device.name}
                             deviceCode={device.deviceCode}
                             location={device.location}
@@ -261,6 +256,22 @@ export default function DashboardPage() {
                     <RecentEventTable events={recentEvents} />
                 </div>
             </div>
+
+            {/* Floating Mute/Unmute Button */}
+            <button
+                onClick={toggleMute}
+                className={`fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-lg transition-all duration-300 group ${
+                    isMuted 
+                    ? "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700" 
+                    : "bg-emerald-500 text-white hover:bg-emerald-600 hover:scale-110"
+                }`}
+                title={isMuted ? "Aktifkan Suara" : "Matikan Suara"}
+            >
+                {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6 animate-pulse" />}
+                <span className="absolute right-full mr-3 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                    {isMuted ? "Suara Mati" : "Suara Aktif"}
+                </span>
+            </button>
         </div>
     );
 }
@@ -268,7 +279,6 @@ export default function DashboardPage() {
 function StatCard({ title, value, icon, gradient, textClass = "text-slate-800 dark:text-slate-100" }: { title: string, value: number, icon: React.ReactNode, gradient: string, textClass?: string }) {
     return (
         <Card className={`border border-white/40 dark:border-white/10 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br ${gradient} overflow-hidden relative group`}>
-            {/* Glossy decorative bloobs */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/40 dark:bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-110" />
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/5 dark:bg-black/20 rounded-full blur-xl -ml-8 -mb-8" />
 

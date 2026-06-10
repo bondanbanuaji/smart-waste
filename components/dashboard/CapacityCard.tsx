@@ -3,9 +3,12 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { getCapacityColor, getCapacityBgColor, formatRelativeTime } from "@/lib/utils";
-import { MapPin, Wifi, WifiOff, Trash2 } from "lucide-react";
+import { MapPin, Wifi, WifiOff, Trash2, Recycle, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface CapacityCardProps {
+    deviceId: string;
     deviceName: string;
     deviceCode: string;
     location: string;
@@ -16,6 +19,7 @@ interface CapacityCardProps {
 }
 
 export function CapacityCard({
+    deviceId,
     deviceName,
     deviceCode,
     location,
@@ -24,10 +28,43 @@ export function CapacityCard({
     isOnline,
     lastUpdate,
 }: CapacityCardProps) {
+    const [isCleaning, setIsCleaning] = useState(false);
+    
+    // DEBUG LOG
+    console.log(`[CapacityCard:${deviceCode}] Rendering with deviceId:`, deviceId);
+
     const isDangerSession = organicLevel >= 90 || inorganicLevel >= 90;
 
+    const handleCleanup = async () => {
+        console.log(`[CapacityCard:${deviceCode}] handleCleanup clicked. Current deviceId:`, deviceId);
+        
+        if (!deviceId || deviceId === "undefined" || deviceId === "[object Object]") {
+            console.error(`❌ [Cleanup:${deviceCode}] Invalid Device ID:`, deviceId);
+            toast.error("ID Perangkat tidak valid.");
+            return;
+        }
+
+        setIsCleaning(true);
+        try {
+            const cleanupUrl = `/api/devices/${deviceId}/cleanup`;
+            console.log(`🚀 [Cleanup:${deviceCode}] Fetching: ${cleanupUrl}`);
+            
+            const res = await fetch(cleanupUrl, {
+                method: "POST",
+            });
+            if (!res.ok) throw new Error("Gagal membersihkan");
+            toast.success("Berhasil!", { description: `Wadah ${deviceName} telah dikosongkan.` });
+            console.log("✅ [Cleanup] Success from Dashboard");
+        } catch (error) {
+            console.error("❌ [Cleanup] Error from Dashboard:", error);
+            toast.error("Gagal melakukan pembersihan");
+        } finally {
+            setIsCleaning(false);
+        }
+    };
+
     return (
-        <Card className={`relative overflow-hidden transition-all duration-500 border-none shadow-sm ${isDangerSession ? 'ring-2 ring-red-500 shadow-red-100' : 'hover:shadow-md'}`}>
+        <Card className={`group relative overflow-hidden transition-all duration-500 border-none shadow-sm ${isDangerSession ? 'ring-2 ring-red-500 shadow-red-100' : 'hover:shadow-md'}`}>
 
             {/* Background Warning Glow if Full */}
             {isDangerSession && (
@@ -62,7 +99,22 @@ export function CapacityCard({
                 </div>
             </CardHeader>
 
-            <CardContent className="pt-5 pb-5 space-y-5">
+            <CardContent className="pt-5 pb-5 space-y-5 relative">
+                {/* Cleanup Button (Visible on Hover or if Danger) */}
+                <div className={`absolute inset-0 z-20 flex items-center justify-center bg-white/80 dark:bg-slate-950/80 backdrop-blur-[2px] transition-all duration-300 ${isCleaning ? 'opacity-100 visible' : 'opacity-0 invisible group-hover:opacity-100 group-hover:visible'}`}>
+                    <button
+                        onClick={handleCleanup}
+                        disabled={isCleaning}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-bold shadow-lg shadow-emerald-200 dark:shadow-emerald-900/40 transition-all active:scale-95 disabled:opacity-70"
+                    >
+                        {isCleaning ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <Recycle className="w-4 h-4" />
+                        )}
+                        {isCleaning ? "Membersihkan..." : "Kosongkan Wadah"}
+                    </button>
+                </div>
 
                 {/* Organic Container */}
                 <div className="space-y-2 relative">
@@ -71,7 +123,7 @@ export function CapacityCard({
                             <div className="p-1.5 rounded-lg bg-green-50/80 dark:bg-green-950/50 shadow-sm border border-green-100 dark:border-green-900 border-b-2">
                                 <LeafIcon className="w-4 h-4 text-green-600 dark:text-green-500" />
                             </div>
-                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Organik (Wet)</span>
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Sampah Basah</span>
                         </div>
                         <span className={`text-base font-bold ${getCapacityColor(organicLevel)}`}>
                             {organicLevel}%
@@ -92,7 +144,7 @@ export function CapacityCard({
                             <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 border-b-2">
                                 <Trash2 className="w-4 h-4 text-slate-600 dark:text-slate-400" />
                             </div>
-                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Anorganik (Dry)</span>
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Sampah Kering</span>
                         </div>
                         <span className={`text-base font-bold ${getCapacityColor(inorganicLevel)}`}>
                             {inorganicLevel}%

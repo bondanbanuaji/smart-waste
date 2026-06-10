@@ -9,16 +9,29 @@ export async function GET() {
             orderBy: { createdAt: "desc" },
         });
 
-        // Safer transform focusing on only serializable fields
-        const formatted = devices.map(d => ({
-            id: d.id,
-            deviceCode: d.deviceCode,
-            name: d.name,
-            location: d.location,
-            isActive: d.isActive,
-            lastPingAt: d.lastPingAt ? d.lastPingAt.toISOString() : null,
-            createdAt: d.createdAt.toISOString(),
-        }));
+        // Get latest capacity for each device
+        const formatted = await Promise.all(
+            devices.map(async (d) => {
+                const latestCapacity = await prisma.capacityLog.findFirst({
+                    where: { deviceId: d.id },
+                    orderBy: { recordedAt: "desc" },
+                });
+
+                return {
+                    id: d.id,
+                    deviceCode: d.deviceCode,
+                    name: d.name,
+                    location: d.location,
+                    isActive: d.isActive,
+                    lastPingAt: d.lastPingAt ? d.lastPingAt.toISOString() : null,
+                    createdAt: d.createdAt.toISOString(),
+                    capacityPreview: latestCapacity ? {
+                        organic: latestCapacity.organicLevel,
+                        inorganic: latestCapacity.inorganicLevel
+                    } : { organic: 0, inorganic: 0 }
+                };
+            })
+        );
 
         return NextResponse.json({ data: formatted });
     } catch (error) {

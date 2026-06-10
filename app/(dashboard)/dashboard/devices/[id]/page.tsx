@@ -32,17 +32,12 @@ export default function DeviceManagePage() {
     useEffect(() => {
         const fetchDevice = async () => {
             try {
-                // To keep it simple, we can fetch all devices and find the one.
-                // Ideally we'd have a GET /api/devices/[id] but this works.
-                const res = await fetch("/api/devices");
+                const res = await fetch(`/api/devices/${params.id}`);
                 const json = await res.json();
                 if (json.data) {
-                    const found = json.data.find((d: Device) => d.id === params.id);
-                    if (found) {
-                        setDevice(found);
-                    } else {
-                        setError("Device tidak ditemukan.");
-                    }
+                    setDevice(json.data);
+                } else {
+                    setError("Device tidak ditemukan.");
                 }
             } catch (err) {
                 setError("Gagal memuat data device.");
@@ -66,19 +61,49 @@ export default function DeviceManagePage() {
         setDevice(prev => {
             if (!prev) return prev;
             if (prev.id === update.deviceId || prev.deviceCode === update.deviceCode) {
+                const isPing = update.type === "ping";
                 return {
                     ...prev,
                     name: update.deviceName || prev.name,
                     lastPingAt: update.lastPingAt || new Date().toISOString(),
-                    capacity: update.organicLevel !== undefined ? {
-                        organic: update.organicLevel,
-                        inorganic: update.inorganicLevel || 0
-                    } : prev.capacity
+                    capacity: isPing ? prev.capacity : {
+                        organic: update.organicLevel ?? prev.capacity?.organic ?? 0,
+                        inorganic: update.inorganicLevel ?? prev.capacity?.inorganic ?? 0
+                    }
                 };
             }
             return prev;
         });
     });
+
+    const handleCleanup = async () => {
+        const id = device?.id || (params as any)?.id;
+        
+        if (!id || id === "undefined") {
+            console.error("❌ [Cleanup] Device ID is undefined", { deviceId: device?.id, paramsId: (params as any)?.id });
+            setError("ID Perangkat tidak valid.");
+            return;
+        }
+
+        setIsSending(true);
+        setError(null);
+        try {
+            console.log(`🚀 [Cleanup] Attempting cleanup for device ID: ${id}`);
+            const res = await fetch(`/api/devices/${id}/cleanup`, {
+                method: "POST",
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Gagal melakukan pembersihan.");
+            }
+            console.log("✅ [Cleanup] Success");
+        } catch (err) {
+            console.error("❌ [Cleanup] Error:", err);
+            setError(err instanceof Error ? err.message : "Terjadi kesalahan koneksi.");
+        } finally {
+            setIsSending(false);
+        }
+    };
 
     const sendCommand = async (command: string) => {
         setIsSending(true);
@@ -247,7 +272,7 @@ export default function DeviceManagePage() {
                             </div>
                         )}
 
-                        <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="grid grid-cols-2 gap-4 mb-4">
                             <Button 
                                 variant="outline" 
                                 className="h-16 flex flex-col gap-1.5 border border-slate-200 dark:border-slate-700 hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-500/10 dark:hover:border-blue-500/30 transition-all text-slate-700 dark:text-slate-300 group"
@@ -268,14 +293,26 @@ export default function DeviceManagePage() {
                             </Button>
                         </div>
 
-                        <Button 
-                            className="w-full font-semibold h-12 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 transition-colors rounded-xl shadow-none"
-                            onClick={() => sendCommand("CLOSE")}
-                            disabled={isSending}
-                        >
-                            {isSending ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2 opacity-70" />}
-                            Kembalikan ke Mode Otomatis
-                        </Button>
+                        <div className="space-y-3">
+                            <Button 
+                                className="w-full font-semibold h-11 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 transition-colors rounded-xl shadow-none"
+                                onClick={() => sendCommand("CLOSE")}
+                                disabled={isSending}
+                            >
+                                {isSending ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2 opacity-70" />}
+                                Kembalikan ke Mode Otomatis
+                            </Button>
+
+                            <Button 
+                                variant="outline"
+                                className="w-full font-bold h-11 border-emerald-200 dark:border-emerald-900 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-xl transition-all"
+                                onClick={handleCleanup}
+                                disabled={isSending}
+                            >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Bersihkan Wadah Sampah
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>

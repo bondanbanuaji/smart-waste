@@ -2,6 +2,50 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 /**
+ * GET Single Device
+ */
+export async function GET(
+    req: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const { id } = params;
+
+        const device = await prisma.device.findUnique({
+            where: { id },
+        });
+
+        if (!device) {
+            return NextResponse.json({ error: "Device not found" }, { status: 404 });
+        }
+
+        const latestCapacity = await prisma.capacityLog.findFirst({
+            where: { deviceId: id },
+            orderBy: { recordedAt: "desc" },
+        });
+
+        const formatted = {
+            id: device.id,
+            deviceCode: device.deviceCode,
+            name: device.name,
+            location: device.location,
+            isActive: device.isActive,
+            lastPingAt: device.lastPingAt ? device.lastPingAt.toISOString() : null,
+            createdAt: device.createdAt.toISOString(),
+            capacity: latestCapacity ? {
+                organic: latestCapacity.organicLevel,
+                inorganic: latestCapacity.inorganicLevel
+            } : { organic: 0, inorganic: 0 }
+        };
+
+        return NextResponse.json({ data: formatted });
+    } catch (error) {
+        console.error("Device API GET error:", error);
+        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
+    }
+}
+
+/**
  * UPDATE Device
  */
 export async function PATCH(

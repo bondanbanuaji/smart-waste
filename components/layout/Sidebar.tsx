@@ -44,7 +44,7 @@ export function Sidebar() {
 
     if (role === "ADMIN") {
         routes.push({
-            label: "Devices",
+            label: "Perangkat",
             icon: Smartphone,
             href: "/dashboard/devices",
             active: pathname === "/dashboard/devices",
